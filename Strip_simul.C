@@ -16,7 +16,7 @@ double d = 17;
 
 Double_t get_Q(Double_t pos)
 {
-	double Q ;
+	double Q;
 
 	if ((pos >= -(p-d)/2) && (pos <= (p-d)/2)) || ((pos >= -(p-d)/2-p) && (pos <= (p-d)/2-p)) || ((pos >= -(p-d)/2+p) && (pos <= (p-d)/2+p))
 	{
