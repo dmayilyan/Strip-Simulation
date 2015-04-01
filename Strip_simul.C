@@ -1,6 +1,6 @@
 // #define EXP_MAX		1.0 	//  Landau curve surrounding box
 #define Q_0			3000	// Number of electrons generated
-#define tau		30/*1000*/	// Given in nm
+#define tau			30/*1000*/	// Given in nm
 #define GATE		10000	// Gate size
 #define gaus_rms	240			// RMS of gaussian noise spread
 
@@ -18,11 +18,11 @@ Double_t get_Q(Double_t pos)
 {
 	double Q;
 
-	if ((pos >= -(p-d)/2) && (pos <= (p-d)/2)) || ((pos >= -(p-d)/2-p) && (pos <= (p-d)/2-p)) || ((pos >= -(p-d)/2+p) && (pos <= (p-d)/2+p))
+	if (((pos >=d) && (pos <= p-d)) || ((pos >=d+p) && (pos <= p-d+p)) || ((pos >=d+2*p) && (pos <= p-d+2*p)))
 	{
 		Q = Q_0;
 	}
-	else if ((pos < -(p-d)/2-p) && (pos > -(p+d)/2-p))
+	else if (((pos > d/2) && (pos < d)) || ((pos > d/2 + p) && (pos < d + p)) || ((pos > d/2 + 2*p) && (pos < d + 2*p)))
 	{
 		Q = Q_0 * (2*pos+p+d)/(2*d);
 	}
@@ -164,7 +164,7 @@ void main()
 		// double T = gRandom->Rndm() * GATE;
 
 
-		Charge_pos = gRandom->Rndm() * 3*(p+d)-(p+d)*3/2;
+		Charge_pos = gRandom->Rndm() * (3*p+d);
 		// Charge_pos = gRandom->Rndm() * 3*p+4*d - (3*p+4*d)/2;
 
 
