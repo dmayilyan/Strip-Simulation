@@ -1,5 +1,6 @@
 // #define EXP_MAX		1.0 	//  Landau curve surrounding box
-#define Q_0			3000	// Number of electrons generated
+// #define Q_0			3000	// Number of electrons generated
+Double_t Q_0 = 3000;	// Number of electrons generated
 #define tau			30/*1000*/	// Given in nm
 #define GATE		10000	// Gate size
 #define gaus_rms	240			// RMS of gaussian noise spread
@@ -13,16 +14,51 @@
 
 double p = 50;
 double d = 17;
+double Eff = 0;
 
+	double Q = 24;
 Double_t get_Q(Double_t pos)
 {
-	double Q;
+	// double Q_0 = 3000;	// Number of electrons generated
 
-	if (((pos >=d) && (pos <= p-d)) || ((pos >=d+p) && (pos <= p-d+p)) || ((pos >=d+2*p) && (pos <= p-d+2*p)))
+
+	if (((pos >=d) && (pos <= p)) || ((pos >=d+p) && (pos <= 2*p)) || ((pos >=d+2*p) && (pos <= 3*p)))
 	{
 		Q = Q_0;
+		Eff = Q_0;
+		cout << pos << " Middle region; Q = " << Eff << endl;
 	}
-	else if (((pos > d/2) && (pos < d)) || ((pos > d/2 + p) && (pos < d + p)) || ((pos > d/2 + 2*p) && (pos < d + 2*p)))
+	else if (pos < d)
+	{
+		// /
+		Eff = Q_0 * pos/d;
+		cout << pos << " Left slope region; Q = " << Eff << endl;
+	}
+	else if ((pos > 3*p) && (pos < (3*p + d)))
+	{
+		Q = Q_0 * (3*p+d-pos)/d;
+		Eff = Q_0 * (3*p+d-pos)/d;
+		// cout << "!!!!!!!!!!! " << Eff << " !!!!!!!!!!!!!!" << endl;
+		cout << pos << " Right slope region; Q = " << Eff << endl;
+		cout << Q_0 << "\t*\t" << (3*p+d-pos)/d << "\t=\t" << Q_0 * (3*p+d-pos)/d << endl;
+		cout << (3*p+d-pos)/d << " !!!!!!!!\n" << endl;
+	}
+	else if ((pos > p) && (pos < p+d))
+	{
+		Q = Q_0 * (p+d-pos)/d + Q_0 * (pos-p)/d;
+		Eff = Q_0 * (p+d-pos)/d + Q_0 * (pos-p)/d;
+		// cout << "!!!!!!!!!!! " << Eff << " !!!!!!!!!!!!!!" << endl;
+		cout << pos << " First sharing region; Q = " << Eff << endl;
+	}
+	else if ((pos > 2*p) && (pos < 2*p + d))
+	{
+		Q =  Q_0 * (2*p+d-pos)/d + Q_0 * (pos-2*p)/d;
+		Eff =  Q_0 * (2*p+d-pos)/d + Q_0 * (pos-2*p)/d;
+		cout << pos << " Second sharing region; Q = " << Eff << endl;
+	}
+
+
+/*	else if (((pos > d/2) && (pos < d)) || ((pos > d/2 + p) && (pos < d + p)) || ((pos > d/2 + 2*p) && (pos < d + 2*p)))
 	{
 		Q = Q_0 * (2*pos+p+d)/(2*d);
 	}
@@ -51,11 +87,11 @@ Double_t get_Q(Double_t pos)
 		cout << "Contribution from second stripe " << Q_0 * (p+d-2*pos)/(2*d) << endl;
 		cout << "Contribution from third stripe " << Q_0 * (2*pos+p+d)/(2*d) << endl;
 		cout << "Overall contribution " << Q << endl;
-	}
+	}*/
 	else
-		Q = 0;
+		Eff = 0;
 
-	return Q;
+	return Eff;
 }
 
 // Double_t get_exp(Double_t start_point, Int_t event_count, Double_t tau, Double_t Q, TH1F* m)
@@ -102,7 +138,7 @@ Double_t get_Q(Double_t pos)
 
 // }
 
-Double_t get_exp(Double_t y[], Double_t start_point, Double_t tau, Double_t Q)
+Double_t get_exp(Double_t y[], Double_t start_point, Double_t tau, Double_t Eff)
 {
 	// cout << start_point << "\t" << tau << "\t" << Q << endl;
 
@@ -114,7 +150,7 @@ Double_t get_exp(Double_t y[], Double_t start_point, Double_t tau, Double_t Q)
 		{
 			double gaus_noise = gRandom->Gaus(0,gaus_rms);
 			// cout << "gn " << gaus_noise << endl;
-			y[start_point+i] += Q * i * exp(-i/tau) + gaus_noise;
+			y[start_point+i] += Eff * i * exp(-i/tau) + gaus_noise;
 		// cout << y[i] << endl;
 		}
 	}
@@ -133,9 +169,9 @@ void main()
 	for (int i = 0; i < GATE; ++i)
 		y[i] = 0;
 
-	cout << "-(p+d)/2 " << -(p+d)/2 << "\t" << "-(p-d)/2 " << -(p-d)/2 << endl;
-	cout << "-(p-d)/2 " << -(p-d)/2 << "\t" << "(p-d)/2 " << (p-d)/2 << endl;
-	cout << "(p-d)/2 " << (p-d)/2 << "\t" << "(p+d)/2 " << (p+d)/2 << endl << endl;
+	// cout << "-(p+d)/2 " << -(p+d)/2 << "\t" << "-(p-d)/2 " << -(p-d)/2 << endl;
+	// cout << "-(p-d)/2 " << -(p-d)/2 << "\t" << "(p-d)/2 " << (p-d)/2 << endl;
+	// cout << "(p-d)/2 " << (p-d)/2 << "\t" << "(p+d)/2 " << (p+d)/2 << endl << endl;
 
 	double time_spread_mean = GATE / COUNT_RATE / 1000; // 1000 is for conversion to Hz
 	cout << "Time spread mean " << time_spread_mean << endl << endl;
@@ -167,7 +203,7 @@ void main()
 		Charge_pos = gRandom->Rndm() * (3*p+d);
 		// Charge_pos = gRandom->Rndm() * 3*p+4*d - (3*p+4*d)/2;
 
-
+		cout << "\n" << SP << "\t";
 		double Q = get_Q(Charge_pos);
 
 		// cout << "Charge_pos " << Charge_pos;
