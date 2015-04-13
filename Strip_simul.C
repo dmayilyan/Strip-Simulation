@@ -16,7 +16,7 @@ double p = 50;
 double d = 17;
 double Eff = 0;
 
-	double Q = 24;
+	// double Q = 24;
 Double_t get_Q(Double_t pos)
 {
 	// double Q_0 = 3000;	// Number of electrons generated
@@ -142,15 +142,15 @@ Double_t get_exp(Double_t y[], Double_t start_point, Double_t tau, Double_t Eff)
 {
 	// cout << start_point << "\t" << tau << "\t" << Q << endl;
 
+	double gaus_noise = gRandom->Gaus(0,gaus_rms);
+	cout << "Start point " << start_point << " gn " << gaus_noise << " Eff. + Noise " << Eff + gaus_noise << endl;
 	for (int i = 0; i < 1000; ++i)
 	{
 		if (start_point + i > GATE-1)
 			continue;
 		else
 		{
-			double gaus_noise = gRandom->Gaus(0,gaus_rms);
-			// cout << "gn " << gaus_noise << endl;
-			y[start_point+i] += Eff * i * exp(-i/tau) + gaus_noise;
+			y[start_point+i] += (Eff + gaus_noise) * i * exp(-i/tau);
 		// cout << y[i] << endl;
 		}
 	}
