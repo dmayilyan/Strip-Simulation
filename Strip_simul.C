@@ -1,22 +1,22 @@
 // #define EXP_MAX		1.0 	//  Landau curve surrounding box
-// #define Q_0			3000	// Number of electrons generated
-Double_t Q_0 = 3000;	// Number of electrons generated
+#define Q_0			3000	// Number of electrons generated
 #define tau			30/*1000*/	// Given in nm
 #define GATE		10000	// Gate size
 #define gaus_rms	240			// RMS of gaussian noise spread
 
 #define COUNT_RATE	1		// Counting rate in kHz
 
-// #define p/*STRIP_PITCH*/	50
-// #define d/*DISTANCE*/	17		// Distance between the stripes
-
 #include <iostream>
+#include "TF1"
 
 double p = 50;
 double d = 17;
 double Eff = 0;
 
-	// double Q = 24;
+double Q = 0;
+
+TH1F *hist = new TH1F("hist", "Signal data", GATE/2, 0, GATE);
+
 Double_t get_Q(Double_t pos)
 {
 	// double Q_0 = 3000;	// Number of electrons generated
@@ -94,77 +94,64 @@ Double_t get_Q(Double_t pos)
 	return Eff;
 }
 
-// Double_t get_exp(Double_t start_point, Int_t event_count, Double_t tau, Double_t Q, TH1F* m)
-// {
-// 	Double_t t, y, x;
-// 	Int_t count = 0;
-// 	Int_t event_no = 0;
-// 	// Big number to avoid infinite loop
-
-// 	cout << "Start point " << start_point << endl;
-
-// 	TF1 *exp_func = new TF1("exp_func","[0]*x*exp(-x/[1])",start_point,start_point+tau);
-// 	TF1 *exp_1 = new TF1("exp_func","x*exp(-x/30)",0,100);
-// 	TF1 *exp_2 = new TF1("exp_func","x*exp(-x/30)",50,150);
-
-// 	exp_func->SetParNames("Q", "tau");
-// 	exp_func->SetParameters(Q, tau);
-
-// 	TH1F* histo=new TH1F("Hist data","Exp signal",GATE/2,0,GATE);
-// 	// histo->Draw();
-// 	// exp_func->Draw("same");
-
-// 	// exp_1->Draw();
-// 	// exp_2->Draw("+");
-
-
-// 	// while ((event_no < event_count) && (count < 1000000))
-// 	// {
-// 	// 	t = gRandom->Rndm()* 1000/*(GATE-1)*/;	// Random point in the gate
-// 	// 	// y = gRandom->Rndm()*EXP_MAX; 	// Random point in the Box
-// 	// 	x = start_point + t;
-// 	// 	// tau *= 2;
-// 	// 	// Checking if the point is under the curve
-// 	// 	// cout << "!!!! tau " << tau << endl;
-
-// 	// 	if (y <= Q*t*exp(-t/tau))
-// 	// 	{
-// 	// 		event_no++;
-// 	// 		if ((x < GATE) && (x >= 0))
-// 	// 			m->Fill(x);				// FillingE histogram
-// 	// 	}
-// 	// 	count++;
-// 	// }
-
-// }
-
-Double_t get_exp(Double_t y[], Double_t start_point, Double_t tau, Double_t Eff)
+Double_t qwe(Double_t *x, Double_t *par)
 {
+	Float_t xx =x[0];
+
+	// cout << "gn = " << par[2] <<  endl;
+	Double_t f = (par[1] + par[2]) * xx * exp(-xx/par[0]);
+
+	// Double_t val = ()
+	return f;
+}
+
+TH1F * get_exp(Double_t tau, Double_t Eff)
+{
+	TH1F* loc_hist = new TH1F("loc_hist", "Single pulse", 1000/2, 0, 1000);
+
 	// cout << start_point << "\t" << tau << "\t" << Q << endl;
 
-	double gaus_noise = gRandom->Gaus(0,gaus_rms);
-	cout << "Start point " << start_point << " gn " << gaus_noise << " Eff. + Noise " << Eff + gaus_noise << endl;
-	for (int i = 0; i < 1000; ++i)
+	// Double_t gaus_noise = gRandom->Gaus(0,gaus_rms);
+	// Double_t f = (par[1] + gaus_noise) * xx * exp(-xx/par[0]);
+	Double_t gaus_noise = gRandom->Gaus(0,gaus_rms);
+
+	TF1 *expo = new TF1("Exp curve", qwe, 0, 1000, 3);
+	expo -> SetParameters(tau, Eff, gaus_noise);
+	for (int ibin = 1; ibin < loc_hist->GetNbinsX()+1; ibin++)
 	{
-		if (start_point + i > GATE-1)
-			continue;
-		else
-		{
-			y[start_point+i] += (Eff + gaus_noise) * i * exp(-i/tau);
-		// cout << y[i] << endl;
-		}
+		loc_hist->SetBinContent(ibin,expo->Eval(loc_hist->GetBinCenter(ibin)));
+		// cout << expo->Eval(loc_hist->GetBinCenter(ibin)) << endl;
 	}
 
-	return y;
+	expo -> SetParNames("tau", "Q");
+	// loc_hist -> Draw();
+
+	// (expo->GetHistogram())->Draw();
+
+
+	// double gaus_noise = gRandom->Gaus(0,gaus_rms);
+	// cout << "Start point " << start_point << " gn " << gaus_noise << " Eff. + Noise " << Eff + gaus_noise << endl;
+	// for (int i = 0; i < 1000; ++i)
+	// {
+	// 	if (start_point + i > GATE-1)
+	// 		continue;
+	// 	else
+	// 	{
+	// 		y[start_point+i] += (Eff + gaus_noise) * i * exp(-i/tau);
+	// 	// cout << y[i] << endl;
+	// 	}
+	// }
+
+	return loc_hist;
 }
 
 void main()
 {
-	double x[GATE] = {0,};
+	double x_graph[GATE] = {0,};
 	double y[GATE] = {0,};
 
 	for (int i = 0; i < GATE; ++i)
-		x[i] = i;
+		x_graph[i] = i;
 
 	for (int i = 0; i < GATE; ++i)
 		y[i] = 0;
@@ -174,11 +161,11 @@ void main()
 	// cout << "(p-d)/2 " << (p-d)/2 << "\t" << "(p+d)/2 " << (p+d)/2 << endl << endl;
 
 	double time_spread_mean = GATE / COUNT_RATE / 1000; // 1000 is for conversion to Hz
-	cout << "Time spread mean " << time_spread_mean << endl << endl;
+	// cout << "Time spread mean " << time_spread_mean << endl << endl;
 
 	// TCanvas *c1 = new TCanvas();
 
-	TH1F* m=new TH1F("Hist data","Exp signal",GATE/2,0,GATE); // 2 ns sampling
+	// TH1F* m=new TH1F("Hist data","Exp signal",GATE/2,0,GATE); // 2 ns sampling
 	// TH1F* l=new TH1F("qwe", "qwe",100,-50,50);
 
 	// for (int i = 0; i < 100; ++i)
@@ -188,43 +175,77 @@ void main()
 	// 	cout << 10 - gRandom->Poisson(10) << endl;
 	// }
 
-	for (int i = 0; i < 10; i++)
+	for (int i = 0; i < 2; i++)
 	{
 		// double T = gRandom->Poisson(10) /** GATE*/;
 		double Charge_pos = 0;
-		double T = time_spread_mean - gRandom->Poisson(time_spread_mean) /** GATE*/;
-		double RP = gRandom->Rndm() * GATE;
-		double SP = RP + T;
+		double T = time_spread_mean - gRandom->Poisson(time_spread_mean);
+		int RP = gRandom->Rndm() * GATE/2;
+		int SP = RP + T;
 		// cout << RP << "\t" << T << endl;
 
 		// double T = gRandom->Rndm() * GATE;
 
-
 		Charge_pos = gRandom->Rndm() * (3*p+d);
 		// Charge_pos = gRandom->Rndm() * 3*p+4*d - (3*p+4*d)/2;
 
-		cout << "\n" << SP << "\t";
+		cout << "\nSP " << SP << "\t";
 		double Q = get_Q(Charge_pos);
 
 		// cout << "Charge_pos " << Charge_pos;
 		// cout << " Q " << Q << endl;
 
-
 		// get_exp(SP, 1000, 1000/*tau*/, Q, m);
 		// Start time, number of points, tau, Number of phot_el, histogram
 
-		get_exp(y, SP, tau, Q);
-		// X coordinate, Y values, Start time, Decay time, Charge collection efficiency
+
+		get_exp(tau, Q);
+
+		// for (int asd = 0; asd < 10; ++asd)
+		// {
+		// 	cout << "! " << loc_hist->GetBinContent(asd) << endl;
+		// }
+
+		for (int h_start = 0; h_start < loc_hist->GetNbinsX(); h_start++)
+		{
+			// cout << loc_hist->GetNbinsX() << "!!!!!!!!!!!!!!!" << endl;
+			if (SP+h_start >= GATE)
+				continue;
+			else
+			{
+				hist->SetBinContent(SP+h_start, loc_hist->GetBinContent(h_start));
+				cout << SP+h_start << "\t" << loc_hist->GetBinContent(h_start) << endl;
+			}
+		}
+		// cout << "START POIINT " << SP << endl;
+
+		// delete loc_hist;
+
+		// Y values, Start time, Decay time, Charge collection efficiency
 		
 	}
 
 
-	gr = new TGraph(GATE,x,y);
 
-	gr->Draw();
+	// gr = new TGraph(GATE,x_graph,y);
 
-	gr->GetXaxis()->SetRangeUser(0,GATE);
-	// gr->GetYaxis()->SetRangeUser(0,35000);
+	// gr->Draw();
+
+	// gr->GetXaxis()->SetRangeUser(0,GATE);
+	// // gr->GetYaxis()->SetRangeUser(0,35000);
+
+	// c1->SaveAs("graph_shot.root");
+	// // c1->SaveAs("graph_shot.xml");
+
+	hist->Draw();
+
+	// Analysis of the data
+
+	// for (int i = 40000; i >= 0; i--)
+	// 	for (int j = 0; j < GATE; j++)
+	// 	{
+	// 		if (y[j])
+	// 	}
 
 	// m->Draw();
 	// l->Draw();
