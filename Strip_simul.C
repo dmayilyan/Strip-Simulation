@@ -40,7 +40,6 @@ Double_t get_Q(Double_t pos)
 		Eff = Q_0 * (3*p+d-pos)/d;
 		// cout << "!!!!!!!!!!! " << Eff << " !!!!!!!!!!!!!!" << endl;
 		cout << pos << " Right slope region; Q = " << Eff << endl;
-		cout << Q_0 << "\t*\t" << (3*p+d-pos)/d << "\t=\t" << Q_0 * (3*p+d-pos)/d << endl;
 		cout << (3*p+d-pos)/d << " !!!!!!!!\n" << endl;
 	}
 	else if ((pos > p) && (pos < p+d))
@@ -175,7 +174,7 @@ void main()
 	// 	cout << 10 - gRandom->Poisson(10) << endl;
 	// }
 
-	for (int i = 0; i < 2; i++)
+	for (int i = 0; i < 50; i++)
 	{
 		// double T = gRandom->Poisson(10) /** GATE*/;
 		double Charge_pos = 0;
@@ -189,32 +188,26 @@ void main()
 		Charge_pos = gRandom->Rndm() * (3*p+d);
 		// Charge_pos = gRandom->Rndm() * 3*p+4*d - (3*p+4*d)/2;
 
-		cout << "\nSP " << SP << "\t";
+		// cout << "\nSP " << SP*2 << "\t";
 		double Q = get_Q(Charge_pos);
-
-		// cout << "Charge_pos " << Charge_pos;
-		// cout << " Q " << Q << endl;
 
 		// get_exp(SP, 1000, 1000/*tau*/, Q, m);
 		// Start time, number of points, tau, Number of phot_el, histogram
 
-
 		get_exp(tau, Q);
 
-		// for (int asd = 0; asd < 10; ++asd)
-		// {
-		// 	cout << "! " << loc_hist->GetBinContent(asd) << endl;
-		// }
-
+		cout << "loc_hist " << loc_hist->GetNbinsX() << endl;
+		cout << "hist " << hist->GetNbinsX() << endl;
+		cout << "SP " << SP << endl;
 		for (int h_start = 0; h_start < loc_hist->GetNbinsX(); h_start++)
 		{
-			// cout << loc_hist->GetNbinsX() << "!!!!!!!!!!!!!!!" << endl;
-			if (SP+h_start >= GATE)
+			start_pos = SP+h_start;
+			if (start_pos >= GATE)
 				continue;
 			else
 			{
-				hist->SetBinContent(SP+h_start, loc_hist->GetBinContent(h_start));
-				cout << SP+h_start << "\t" << loc_hist->GetBinContent(h_start) << endl;
+				hist->SetBinContent(start_pos, hist->GetBinContent(start_pos) + loc_hist->GetBinContent(h_start));
+				// cout << h_start << "\t" << loc_hist->GetBinContent(h_ssart) << endl;
 			}
 		}
 		// cout << "START POIINT " << SP << endl;
@@ -225,30 +218,11 @@ void main()
 		
 	}
 
-
-
-	// gr = new TGraph(GATE,x_graph,y);
-
-	// gr->Draw();
-
-	// gr->GetXaxis()->SetRangeUser(0,GATE);
-	// // gr->GetYaxis()->SetRangeUser(0,35000);
-
-	// c1->SaveAs("graph_shot.root");
-	// // c1->SaveAs("graph_shot.xml");
-
 	hist->Draw();
+	c1->SaveAs("graph_shot.root");
 
 	// Analysis of the data
-
-	// for (int i = 40000; i >= 0; i--)
-	// 	for (int j = 0; j < GATE; j++)
-	// 	{
-	// 		if (y[j])
-	// 	}
-
-	// m->Draw();
-	// l->Draw();
+	
 
 
 }
