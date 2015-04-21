@@ -1,9 +1,10 @@
-// #define EXP_MAX		1.0 	//  Landau curve surrounding box
-#define E_0			10000		// Energy of the photon in eV
-#define Q_0			E_0/3.6		// Number of electrons generated
-#define tau			30/*1000*/	// Given in nm
-#define GATE		10000	// Gate size
-#define gaus_rms	240			// RMS of gaussian noise spread
+// #define EXP_MAX		1.0 		//  Landau curve surrounding box
+#define E_0			10000			// Energy of the photon in eV
+#define Q_0			E_0/3.6			// Number of electrons generated
+#define tau			100/*1000*/		// Given in ns
+#define GATE		10000			// Gate size in ns
+#define gaus_rms	240				// RMS of gaussian noise spread
+#define num_pulses	10/*1000*/ 			// Number of pulses
 
 #define COUNT_RATE	1		// Counting rate in kHz
 
@@ -17,7 +18,12 @@ double Eff = 0;
 double Q = 0;
 
 TH1F *hist = new TH1F("hist", "Signal data", GATE/2, 0, GATE);
+TH1F *en_hist = new TH1F("en_hist", "Energy data", 2000, 0, 2000);
 
+///////////////////////////////////////////////////
+// Version with three stripes
+
+/*
 Double_t get_Q(Double_t pos)
 {
 	// double Q_0 = 3000;	// Number of electrons generated
@@ -25,34 +31,65 @@ Double_t get_Q(Double_t pos)
 
 	if (((pos >=d) && (pos <= p)) || ((pos >=d+p) && (pos <= 2*p)) || ((pos >=d+2*p) && (pos <= 3*p)))
 	{
-		Q = Q_0;
+		// Flat part
 		Eff = Q_0;
 		// cout << pos << " Middle region; Q = " << Eff << endl;
 	}
 	else if (pos < d)
 	{
-		// /
+		// Left slope /
 		Eff = Q_0 * pos/d;
 		// cout << pos << " Left slope region; Q = " << Eff << endl;
 	}
 	else if ((pos > 3*p) && (pos < (3*p + d)))
 	{
-		Q = Q_0 * (3*p+d-pos)/d;
+		// Right slope \
 		Eff = Q_0 * (3*p+d-pos)/d;
 		// cout << pos << " Right slope region; Q = " << Eff << endl;
 		// cout << (3*p+d-pos)/d << " !!!!!!!!\n" << endl;
 	}
 	else if ((pos > p) && (pos < p+d))
 	{
-		Q = Q_0 * (p+d-pos)/d + Q_0 * (pos-p)/d;
 		Eff = Q_0 * (p+d-pos)/d + Q_0 * (pos-p)/d;
 		// cout << pos << " First sharing region; Q = " << Eff << endl;
 	}
 	else if ((pos > 2*p) && (pos < 2*p + d))
 	{
-		Q =  Q_0 * (2*p+d-pos)/d + Q_0 * (pos-2*p)/d;
 		Eff =  Q_0 * (2*p+d-pos)/d + Q_0 * (pos-2*p)/d;
 		// cout << pos << " Second sharing region; Q = " << Eff << endl;
+	}
+	else
+		Eff = 0;
+
+
+	return Eff;
+}
+*/
+///////////////////////////////////////////////////
+
+
+Double_t get_Q(Double_t pos)
+{
+	// double Q_0 = 3000;	// Number of electrons generated
+
+
+	if ((pos >=d) && (pos <= p))
+	{
+		// Flat part
+		Eff = Q_0;
+		// cout << pos << " Middle region; Q = " << Eff << endl;
+	}
+	else if (pos < d)
+	{
+		// Left slope /
+		Eff = Q_0 * pos/d;
+		// cout << pos << " Left slope region; Q = " << Eff << endl;
+	}
+	else if ((pos > p) && (pos < p+d))
+	{
+		// Right slope \
+		Eff = Q_0 * (p+d-pos)/d;
+		// cout << pos << " First sharing region; Q = " << Eff << endl;
 	}
 	else
 		Eff = 0;
@@ -60,11 +97,13 @@ Double_t get_Q(Double_t pos)
 	return Eff;
 }
 
+
+
 Double_t exp_func(Double_t *x, Double_t *par)
 {
 	Float_t xx =x[0];
 
-	Double_t f = (par[1] + par[2]) * xx * exp(-xx/par[0]);
+	Double_t f = (par[1] + par[2])/par[0] * xx * exp(-xx/par[0]);
 
 	return f;
 }
@@ -88,26 +127,21 @@ TH1F * get_exp(Double_t tau, Double_t Eff)
 	}
 
 	expo -> SetParNames("tau", "Q", "Gauss noise");
+	en_hist->Fill(loc_hist->GetMaximum());
+	// cout << "loc_hist " << loc_hist->GetBinContent(23) << endl;
 	// loc_hist -> Draw();
 
 	return loc_hist;
+
+	// delete loc_hist;
 }
 
 void get_s_curve()
 {
-	double max = hist->GetMaximum();
-	double max_next = hist->GetMaximum(max);
-	double maxbin = hist->GetMaximumBin();
-	// cout << "MAX " << max << " max_next " << max_next << " bin " << maxbin << endl;
-	int layer_old[5000] = {0,};
-	int layer[5000] = {0,};
-	int column_old[100000] = {0,};
-	int column[100000] = {0,};
-
-	double peakcount[100000] = {0,};
+	double peakcount[500000] = {0,};
 
 
-	TH1F* s_curve = new TH1F("s_curve", "S Curve", 100000/2, 0, 100000);
+	TH1F* s_curve = new TH1F("s_curve", "S Curve", 500000/2, 0, 500000);
 
 	double hist_val_old = 0.;
 	double hist_val = 0.;
@@ -142,100 +176,19 @@ void get_s_curve()
 
 	s_curve->Draw();
 
-/*
-	for (int i = 0; i < hist->GetNbinsX(); i++)
-	{
-		for (int j = 0; j < 10000; j++)
-		{
-			if (hist->GetBinContent(i) > j)
-			{
-				column[j] += 1;	
-				if (j!=0)
-					if (column[j-1] == 1)
-						column[j-1] = 0;
-			}
-
-			double s_content = s_curve->GetBinContent(j)+column[j];
-			// cout << "REOIREOIJOU" << s_content << endl;
-			s_curve->SetBinContent(j,s_content);
-		}
-	}
-
-	s_curve -> Draw();
-*/
-
-	// // bool under_curve = true;
-	// for (double i = max; i > max-400; i--)
-	// {
-	// 	for (int j = 0; j < hist->GetNbinsX(); j++)
-	// 	{
-	// 		// Not sensitive to the case when first bin is non-zero
-	// 		double hist_val[j] = hist->GetBinContent(j);
-	// 		double hist_val_prev[j] = {0,};
-
-	// 		if (hist_val[j] > i-1)
-	// 		{
-	// 			if (hist_val_prev[j] >= hist)
-	// 			cout << "Քաքը մեծ ա" << endl;
-	// 		}
-	// 		// Filling layer with peak positions
-	// 		// cout << hist->GetNbinsX() << " &&&&&&&&&&&" << endl;
-	// 		// if (hist_val > i-1)
-	// 		// {
-	// 		// 	cout << "պուպուլ " << j*2 << " val " << hist_val << endl;
-	// 		// 	// under_curve = true;
-	// 		// 	layer[j] = 1;
-	// 		// 	if (i == max)
-	// 		// 		layer_old[j] = layer[j];
-
-	// 		// 	if (j != 0)
-	// 		// 		if ((layer[j] == 1) && (layer[j-1] == 0))
-	// 		// 		{
-	// 		// 			peakcount++;
-	// 		// 			cout << "j " << 2*j << endl;
-	// 		// 		}
-				
-	// 		// }
-	// 		// else
-	// 		// {
-	// 		// 	// under_curve = false;
-	// 		// 	layer[j] = 0;
-	// 		// 	if (i == max)
-	// 		// 		layer_old[j] = layer[j];
-	// 		// 	// cout << "chka " << j << endl;
-	// 		// }
-
-	// 		// cout << layer[j] << "\t" << layer_old[j] << endl;
-
-	// 		// if ((layer_old[j] <= layer[j]) && (layer_old[j] >= layer[j]))
-	// 		// 	if ((layer[j-1] == 0) && (layer[j] == 1))
-
-	// 	}
-
-	// 	// for (int j = 0; j < hist->GetNbinsX(); j++)
-	// 	// {
-	// 	// 	layer_old[j] = layer[j];
-
-	// 	// 	if (layer_old[j] == layer[j])
-	// 	// 		continue;
-	// 	// 	else
-	// 	// 		peakcount++;
-	// 	// }
-	// 	cout << peakcount << " #####################" << endl;
-	// }
 	
 }
 
 void main()
 {
-	double x_graph[GATE] = {0,};
-	double y[GATE] = {0,};
+	// double x_graph[GATE] = {0,};
+	// double y[GATE] = {0,};
 
-	for (int i = 0; i < GATE; ++i)
-		x_graph[i] = i;
+	// for (int i = 0; i < GATE; ++i)
+	// 	x_graph[i] = i;
 
-	for (int i = 0; i < GATE; ++i)
-		y[i] = 0;
+	// for (int i = 0; i < GATE; ++i)
+	// 	y[i] = 0;
 
 	// cout << "-(p+d)/2 " << -(p+d)/2 << "\t" << "-(p-d)/2 " << -(p-d)/2 << endl;
 	// cout << "-(p-d)/2 " << -(p-d)/2 << "\t" << "(p-d)/2 " << (p-d)/2 << endl;
@@ -246,7 +199,7 @@ void main()
 
 	// TCanvas *c1 = new TCanvas();
 
-	for (int i = 0; i < 50; i++)
+	for (int i = 0; i < num_pulses; i++)
 	{
 		// double T = gRandom->Poisson(10) /** GATE*/;
 		double Charge_pos = 0;
@@ -257,7 +210,11 @@ void main()
 
 		// double T = gRandom->Rndm() * GATE;
 
-		Charge_pos = gRandom->Rndm() * (3*p+d);
+		// Version for 3 stripes
+		// Charge_pos = gRandom->Rndm() * (3*p+d);
+
+		// Version with one stripe
+		Charge_pos = gRandom->Rndm() * (p+d);
 		// Charge_pos = gRandom->Rndm() * 3*p+4*d - (3*p+4*d)/2;
 
 		// cout << "\nSP " << SP*2 << "\t";
@@ -287,12 +244,13 @@ void main()
 	}
 
 	hist->Draw();
-	c1->SaveAs("graph_shot.root");
+	// c1->SaveAs("graph_shot.root");
 
+	// en_hist->Draw();
 	// Analysis of the data
 	// Making the S-curve
 
-	get_s_curve();
+	// get_s_curve();
 
 
 }
