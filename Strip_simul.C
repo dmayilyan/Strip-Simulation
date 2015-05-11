@@ -1,15 +1,22 @@
 // #define EXP_MAX		1.0 		//  Landau curve surrounding box
 #define E_0			10000			// Energy of the photon in eV
 #define Q_0			E_0/3.6			// Number of electrons generated
-#define tau			100/*1000*/		// Given in ns
-#define GATE		10000			// Gate size in ns
+#define tau			100				// Given in ns
+#define GATE		1000000000		// Gate size in ns
 #define gaus_rms	240				// RMS of gaussian noise spread
-#define num_pulses	10/*1000*/ 			// Number of pulses
+#define num_pulses	100			// Number of pulses
+#define exp_tau		100				// D.qecay time in ns
 
 #define COUNT_RATE	1		// Counting rate in kHz
 
 #include <iostream>
-#include "TF1"
+using namespace::std;
+#include "TF1.h"
+#include "TH1.h"
+#include "TH1F.h"
+#include "TMath.h"
+#include "math.h"
+#include "TRandom.h"
 
 double p = 50;
 double d = 17;
@@ -132,21 +139,24 @@ TH1F * get_exp(Double_t tau, Double_t Eff)
 	// loc_hist -> Draw();
 
 	return loc_hist;
-
-	// delete loc_hist;
 }
 
 void get_s_curve()
 {
-	double peakcount[500000] = {0,};
+	TCanvas *c2 = new TCanvas("S Curve");
 
+	double peakcount[500000] = {0,};
 
 	TH1F* s_curve = new TH1F("s_curve", "S Curve", 500000/2, 0, 500000);
 
-	double hist_val_old = 0.;
-	double hist_val = 0.;
+	int hist_val_old = 0.;
+	int hist_val = 0.;
 
 	hist_val_old = hist->GetBinContent(0);
+	int prev_index = 0;
+	int next_index = 0;
+	int index = 0;
+	bool peak_found = false;
 	for (int i = 0; i < hist->GetNbinsX(); i++)
 	{
 		hist_val = hist->GetBinContent(i);
@@ -157,26 +167,85 @@ void get_s_curve()
 		if (hist_val >= hist_val_old)
 		{
 			hist_val_old = hist_val;
-			// cout << "! " << i << endl;
-			continue;
+
+			double s_content = s_curve->GetBinContent(hist_val)+1;
+			s_curve->SetBinContent(hist_val,s_content);
+
 		}
-		else
-		{
-			hist_val_old = hist_val;
-			for (int j = hist_val-1; j >= 0; j--)
-			{
-				peakcount[j] += 1;
-				double s_content = s_curve->GetBinContent(j)+1;
-				s_curve->SetBinContent(j,s_content);
-				// cout << "s_content " << s_content << endl;
-			}
-		}
+
+		// if ((hist_val >= hist_val_old) && (hist_val != 0))
+		// {
+		// 	hist_val_old = hist_val;
+		// 	// next_index = i;
+		// 	// if (i == 0)
+		// 	// 	prev_index = next_index;
+
+		// 	// cout << i << " hist_val " << hist_val << endl;
+
+		// 	// double s_content = s_curve->GetBinContent(hist_val)+1;
+		// 	// s_curve->SetBinContent(hist_val,s_content);
+		// 	// cout << "! " << i << endl;
+
+		// 	if (i != (next_index+1))
+		// 	{
+		// 		index = hist->GetBinContent(next_index);
+		// 		// cout << index << " կա\n";
+		// 	}
+		// 	else
+		// 	{
+		// 		index = 0;
+		// 		// cout << "չկա\n";				
+		// 	}
+
+		// 	// cout << i << "\t" << hist->GetBinContent(i) << endl;
+
+		// 	// cout << "index " << index << endl;
+		// 	if (peak_found)
+		// 	{
+
+		// 		for (int j = hist_val; j >= index; j--)
+		// 		{
+		// 			// peakcount[j] += 1;
+		// 			int j = hist_val;
+		// 			double s_content = s_curve->GetBinContent(j)+1;
+		// 			s_curve->SetBinContent(j,s_content);
+		// 			// cout << "s_content " << s_content << endl;
+		// 		}
+
+		// 		peak_found = false;
+		// 	}
+
+		// }
+		// else
+		// {
+		// 	hist_val_old = hist_val;
+		// 	// next_index = i;
+		// 	// if (i == 0)
+		// 	// 	prev_index = next_index;
+
+		// 	peak_found = true;
+		// 	next_index = i;
+		// 	// cout << "Next index " << next_index << endl;
+		// 	// cout << "lowering " << i*2 << "\t" << hist->GetBinContent(i) << endl;
+
+		// 	continue;
+			
+		// 	// peakcount[hist_val] += 1;
+
+		// 	// for (int j = hist_val-1; j >= 0; j--)
+		// 	// {
+		// 	// 	peakcount[j] += 1;
+		// 	// 	double s_content = s_curve->GetBinContent(j)+1;
+		// 	// 	s_curve->SetBinContent(j,s_content);
+		// 	// 	// cout << "s_content " << s_content << endl;
+		// 	// }
+		// }
 
 	}
 
 	s_curve->Draw();
 
-	
+
 }
 
 void main()
@@ -203,7 +272,9 @@ void main()
 	{
 		// double T = gRandom->Poisson(10) /** GATE*/;
 		double Charge_pos = 0;
-		double T = time_spread_mean - gRandom->Poisson(time_spread_mean);
+		// double T = time_spread_mean - gRandom->Poisson(time_spread_mean);
+		// cout << "TIME SPREAD MEAN " << time_spread_mean << endl;
+		double T = gRandom->Exp(exp_tau);
 		int RP = gRandom->Rndm() * GATE/2;
 		int SP = RP + T;
 		// cout << RP << "\t" << T << endl;
@@ -230,7 +301,7 @@ void main()
 		// cout << "SP " << SP << endl;
 		for (int h_start = 0; h_start < loc_hist->GetNbinsX(); h_start++)
 		{
-			start_pos = SP+h_start;
+			double start_pos = SP+h_start;
 			if (start_pos >= GATE)
 				continue;
 			else
@@ -238,19 +309,19 @@ void main()
 				// Filling the bins with integers
 				hist->SetBinContent(start_pos, (int)hist->GetBinContent(start_pos) + (int)loc_hist->GetBinContent(h_start));
 				// cout << h_start << "\t" << loc_hist->GetBinContent(h_ssart) << endl;
+				// cout << "EXAV!!!\n";
 			}
 		}
 		
 	}
 
-	hist->Draw();
+	// hist->Draw();
 	// c1->SaveAs("graph_shot.root");
 
 	// en_hist->Draw();
 	// Analysis of the data
 	// Making the S-curve
 
-	// get_s_curve();
-
+	get_s_curve();
 
 }
