@@ -2,9 +2,9 @@
 #define E_0			10000			// Energy of the photon in eV
 #define Q_0			E_0/3.6			// Number of electrons generated
 #define tau			100				// Given in ns
-#define GATE		1000000000		// Gate size in ns
+#define GATE		10000/*00000*/		// Gate size in ns
 #define gaus_rms	240				// RMS of gaussian noise spread
-#define num_pulses	100			// Number of pulses
+#define num_pulses	1/*0*/			// Number of pulses
 #define exp_tau		100				// D.qecay time in ns
 
 #define COUNT_RATE	1		// Counting rate in kHz
@@ -145,9 +145,9 @@ void get_s_curve()
 {
 	TCanvas *c2 = new TCanvas("S Curve");
 
-	double peakcount[500000] = {0,};
+	double peakcount[10000] = {0,};
 
-	TH1F* s_curve = new TH1F("s_curve", "S Curve", 500000/2, 0, 500000);
+	TH1F* s_curve = new TH1F("s_curve", "S Curve", 10000, 0, 10000); // 2 is missing
 
 	int hist_val_old = 0.;
 	int hist_val = 0.;
@@ -157,21 +157,55 @@ void get_s_curve()
 	int next_index = 0;
 	int index = 0;
 	bool peak_found = false;
+	int min_val = 0;
 	for (int i = 0; i < hist->GetNbinsX(); i++)
 	{
 		hist_val = hist->GetBinContent(i);
-		// cout << i << " hist_val " << hist_val << endl;
+		if (hist_val != 0)
+		cout << i << "\t" << hist_val << "\n";
+		// cout << "GetbinX " << hist->GetNbacaainsX() << endl;
 		// cout << i << " hist_val_old " << hist_val_old << endl;
-		// hist_val_old = hist_val;
 
+
+		// if (hist_val != 0)
+		// cout << hist_val << " hist_val\thist_val_old\t" << hist_val_old << endl;
 		if (hist_val >= hist_val_old)
 		{
-			hist_val_old = hist_val;
-
-			double s_content = s_curve->GetBinContent(hist_val)+1;
-			s_curve->SetBinContent(hist_val,s_content);
-
+			// cout << i*2 << " i\n";
+			for (int j = hist_val; j >= 0; j--)
+				peakcount[j] += 1;
 		}
+		hist_val_old = hist_val;
+
+		// if (hist_val >= hist_val_old)
+		// {
+		// 	// cout << i << " hist_val " << hist_val << endl;
+			
+		// 	hist_val_old = hist_val;
+		// 	peak_found = false;
+
+		// 	min_val = 0;
+		// 	// continue;
+
+		// }
+		// else
+		// {
+		// 	hist_val_old = hist_val;
+		// 	peak_found = true;
+
+		// 	min_val = hist_val;
+		// 	cout << "ABRACADABRA\n";
+		// }
+
+		// if (peak_found)
+		// {
+		// 	cout << "min_val " << min_val << endl;
+		// 	for (int j = hist_val-1; j >= min_val; j--)
+		// 	{
+		// 		double s_content = s_curve->GetBinContent(j)+1;
+		// 		s_curve->SetBinContent(j,s_content);
+		// 	}
+		// }
 
 		// if ((hist_val >= hist_val_old) && (hist_val != 0))
 		// {
@@ -246,6 +280,10 @@ void get_s_curve()
 	s_curve->Draw();
 
 
+	// for (int q = 0; q <= 10000; q++)
+	// 	if (peakcount[q] != 0)
+	// 		cout << peakcount[q] << endl;
+
 }
 
 void main()
@@ -315,7 +353,7 @@ void main()
 		
 	}
 
-	// hist->Draw();
+	hist->Draw();
 	// c1->SaveAs("graph_shot.root");
 
 	// en_hist->Draw();
