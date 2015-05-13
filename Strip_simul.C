@@ -147,7 +147,7 @@ void get_s_curve()
 
 	double peakcount[10000] = {0,};
 
-	TH1F* s_curve = new TH1F("s_curve", "S Curve", 10000, 0, 10000); // 2 is missing
+	TH1F* s_curve = new TH1F("s_curve", "S Curve", 10000/2, 0, 10000); // 2 is missing
 
 	int hist_val_old = 0.;
 	int hist_val = 0.;
@@ -161,21 +161,31 @@ void get_s_curve()
 	for (int i = 0; i < hist->GetNbinsX(); i++)
 	{
 		hist_val = hist->GetBinContent(i);
-		if (hist_val != 0)
-		cout << i << "\t" << hist_val << "\n";
-		// cout << "GetbinX " << hist->GetNbacaainsX() << endl;
+		// cout << "GetbinX " << hist->GetNbinsX() << endl;
 		// cout << i << " hist_val_old " << hist_val_old << endl;
+		// hist_val_old = hist_val;
 
-
-		// if (hist_val != 0)
-		// cout << hist_val << " hist_val\thist_val_old\t" << hist_val_old << endl;
 		if (hist_val >= hist_val_old)
 		{
-			// cout << i*2 << " i\n";
-			for (int j = hist_val; j >= 0; j--)
-				peakcount[j] += 1;
+			hist_val_old = hist_val;
+
+			if (min_val != 0)
+				min_val = hist_val_old;
+
+			for (int j = hist_val; j >= min_val; j--)
+			{
+				if (j!=0)
+				cout << j << " j\n";
+				double s_content = s_curve->GetBinContent(s_curve->FindBin(j))+1;
+				s_curve->SetBinContent(s_curve->FindBin(j),s_content);
+			}		
 		}
-		hist_val_old = hist_val;
+		else
+		{
+			hist_val_old = hist_val;
+
+			min_val = hist_val;
+		}
 
 		// if (hist_val >= hist_val_old)
 		// {
@@ -279,10 +289,6 @@ void get_s_curve()
 
 	s_curve->Draw();
 
-
-	// for (int q = 0; q <= 10000; q++)
-	// 	if (peakcount[q] != 0)
-	// 		cout << peakcount[q] << endl;
 
 }
 
