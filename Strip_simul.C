@@ -1,10 +1,9 @@
-// #define EXP_MAX		1.0 		//  Landau curve surrounding box
 #define E_0			10000			// Energy of the photon in eV
 #define Q_0			E_0/3.6			// Number of electrons generated
 #define tau			100				// Given in ns
 #define GATE		10000/*00000*/		// Gate size in ns
 #define gaus_rms	240				// RMS of gaussian noise spread
-#define num_pulses	1/*0*/			// Number of pulses
+#define num_pulses	3/*0*/			// Number of pulses
 #define exp_tau		100				// D.qecay time in ns
 
 #define COUNT_RATE	1		// Counting rate in kHz
@@ -150,42 +149,99 @@ void get_s_curve()
 	TH1F* s_curve = new TH1F("s_curve", "S Curve", 10000/2, 0, 10000); // 2 is missing
 
 	int hist_val_old = 0.;
+	int hist_val_cur = 0.;
+	int hist_val_new = 0.;
 	int hist_val = 0.;
 
-	hist_val_old = hist->GetBinContent(0);
 	int prev_index = 0;
 	int next_index = 0;
 	int index = 0;
 	bool peak_found = false;
 	int min_val = 0;
-	for (int i = 0; i < hist->GetNbinsX(); i++)
+
+	cout << hist->GetMaximum() << " That's the max val" << endl;
+	// int *hist_max_val;
+	int hist_max_val = hist->GetBinContent(hist->GetMaximumBin());
+
+	int *g_gauge_count = (int*)malloc(256*sizeof(int));
+	if(g_gauge_count==NULL)                     
 	{
-		hist_val = hist->GetBinContent(i);
+		printf("Error! memory not allocated.");
+		exit(0);
+	}
+
+	cout << "hist_max_val " << hist_max_val << endl;
+
+	// int g_gauge_count[hist_max_val] = {0,};
+	static const int X_COUNT = hist->GetNbinsX() - 1;
+	// int X_COUNT = 1000;
+
+	// double g_min[X_COUNT]={0.,};
+	int *g_min = (int*)malloc(256*sizeof(int));
+	if(g_min==NULL)                     
+	{
+		printf("Error! memory not allocated.");
+		exit(0);
+	}
+
+	// double g_max[X_COUNT]={0.,};
+	int *g_max = (int*)malloc(256*sizeof(int));
+	if(g_max==NULL)                     
+	{
+		printf("Error! memory not allocated.");
+		exit(0);
+	}
+
+	int g_count = 0;
+	hist_val_old = hist->GetBinContent(0);
+	for (int i = 1; i < X_COUNT; i++)
+	{
+		if (i != 1)
+			hist_val_old = hist->GetBinContent(i-1);
+
+		hist_val_cur = hist->GetBinContent(i);
+		hist_val_new = hist->GetBinContent(i+1);
+
+		// cout <<  hist_val_old << hist_val_cur << hist_val_new << endl;
+
 		// cout << "GetbinX " << hist->GetNbinsX() << endl;
 		// cout << i << " hist_val_old " << hist_val_old << endl;
 		// hist_val_old = hist_val;
 
-		if (hist_val >= hist_val_old)
+
+		// suppose first comes a peak
+		if ((hist_val_old <= hist_val_cur) && (hist_val_new < hist_val_cur))		// peak
 		{
-			hist_val_old = hist_val;
-
-			if (min_val != 0)
-				min_val = hist_val_old;
-
-			for (int j = hist_val; j >= min_val; j--)
-			{
-				if (j!=0)
-				cout << j << " j\n";
-				double s_content = s_curve->GetBinContent(s_curve->FindBin(j))+1;
-				s_curve->SetBinContent(s_curve->FindBin(j),s_content);
-			}		
+			g_max[g_count] = hist_val_cur;
 		}
 		else
+		if ((hist_val_cur <= hist_val_old) && (hist_val_cur < hist_val_new))		// min
 		{
-			hist_val_old = hist_val;
-
-			min_val = hist_val;
+			g_min[g_count] = hist_val_cur;
+			g_count++;
 		}
+
+		// if (hist_val >= hist_val_old)
+		// {
+		// 	hist_val_old = hist_val;
+
+		// 	if (min_val != 0)
+		// 		min_val = hist_val_old;
+
+		// 	for (int j = hist_val; j >= min_val; j--)
+		// 	{
+		// 		if (j!=0)
+		// 		cout << j << " j\n";
+		// 		double s_content = s_curve->GetBinContent(s_curve->FindBin(j))+1;
+		// 		s_curve->SetBinContent(s_curve->FindBin(j),s_content);
+		// 	}		
+		// }
+		// else
+		// {
+		// 	hist_val_old = hist_val;
+
+		// 	min_val = hist_val;
+		// }
 
 		// if (hist_val >= hist_val_old)
 		// {
@@ -287,8 +343,30 @@ void get_s_curve()
 
 	}
 
+	for (int i = 1; i <= hist_max_val; i++)
+	{
+		int min_count = 0;
+		int max_count = 0;
+		for (int j = 0; j < (const)g_count + 1; j++)
+		{
+			if (g_min[j] >= i)
+				min_count++;
+			if (g_max[j] >= i)
+			{
+				// cout << "CHECKPOINT\n";
+				max_count++;
+			}
+		}
+
+		g_gauge_count[i] = max_count - min_count;
+	}
+
+
 	s_curve->Draw();
 
+	// free(g_gauge_count);
+	// free(g_min);
+	// free(g_max);
 
 }
 
