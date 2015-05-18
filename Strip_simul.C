@@ -159,42 +159,46 @@ void get_s_curve()
 	bool peak_found = false;
 	int min_val = 0;
 
-	cout << hist->GetMaximum() << " That's the max val" << endl;
 	// int *hist_max_val;
 	int hist_max_val = hist->GetBinContent(hist->GetMaximumBin());
 
-	int *g_gauge_count = (int*)malloc(256*sizeof(int));
-	if(g_gauge_count==NULL)                     
-	{
-		printf("Error! memory not allocated.");
-		exit(0);
-	}
+	cout << hist->GetMaximum() << " That's the max val" << endl;
+	// int *g_gauge_count = (int*)malloc(3000*sizeof(int));
+	int g_gauge_count = 3000;
+	// if(g_gauge_count==NULL)
+	// {
+	// 	printf("Error! memory not allocated.");
+	// 	exit(0);
+	// }
 
 	cout << "hist_max_val " << hist_max_val << endl;
 
 	// int g_gauge_count[hist_max_val] = {0,};
-	static const int X_COUNT = hist->GetNbinsX() - 1;
+	// static const int X_COUNT = hist->GetNbinsX();
+	int X_COUNT = 5000
 	// int X_COUNT = 1000;
 
 	// double g_min[X_COUNT]={0.,};
-	int *g_min = (int*)malloc(256*sizeof(int));
-	if(g_min==NULL)                     
-	{
-		printf("Error! memory not allocated.");
-		exit(0);
-	}
+	// int *g_min = (int*)malloc(3000*sizeof(int));
+	int g_min[10000];
+	// if(g_min==NULL)
+	// {
+	// 	printf("Error! memory not allocated.");
+	// 	exit(0);
+	// }
 
 	// double g_max[X_COUNT]={0.,};
-	int *g_max = (int*)malloc(256*sizeof(int));
-	if(g_max==NULL)                     
-	{
-		printf("Error! memory not allocated.");
-		exit(0);
-	}
+	// int *g_max = (int*)malloc(3000*sizeof(int));
+	int g_max[10000];
+	// if(g_max==NULL)
+	// {
+	// 	printf("Error! memory not allocated.");
+	// 	exit(0);
+	// }
 
 	int g_count = 0;
 	hist_val_old = hist->GetBinContent(0);
-	for (int i = 1; i < X_COUNT; i++)
+	for (int i = 1; i < X_COUNT-1; i++)
 	{
 		if (i != 1)
 			hist_val_old = hist->GetBinContent(i-1);
@@ -208,7 +212,9 @@ void get_s_curve()
 		// cout << i << " hist_val_old " << hist_val_old << endl;
 		// hist_val_old = hist_val;
 
+		cout << "CHECKPOINT\n";
 
+		cout << g_count << endl;
 		// suppose first comes a peak
 		if ((hist_val_old <= hist_val_cur) && (hist_val_new < hist_val_cur))		// peak
 		{
@@ -353,7 +359,6 @@ void get_s_curve()
 				min_count++;
 			if (g_max[j] >= i)
 			{
-				// cout << "CHECKPOINT\n";
 				max_count++;
 			}
 		}
@@ -364,9 +369,9 @@ void get_s_curve()
 
 	s_curve->Draw();
 
-	// free(g_gauge_count);
-	// free(g_min);
-	// free(g_max);
+	free(g_gauge_count);
+	free(g_min);
+	free(g_max);
 
 }
 
