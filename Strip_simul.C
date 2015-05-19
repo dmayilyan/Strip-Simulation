@@ -3,7 +3,7 @@
 #define tau			100				// Given in ns
 #define GATE		10000/*00000*/		// Gate size in ns
 #define gaus_rms	240				// RMS of gaussian noise spread
-#define num_pulses	1/*0*/			// Number of pulses
+#define num_pulses	10/*000*/			// Number of pulses
 #define exp_tau		100				// D.qecay time in ns
 
 #define COUNT_RATE	1		// Counting rate in kHz
@@ -209,17 +209,19 @@ void get_s_curve()
 		// cout << "CHECKPOINT\n";
 
 		// suppose first comes a peak
-		if ((hist_val_old <= hist_val_cur) && (hist_val_new < hist_val_cur))		// peak
+		if ((hist_val_old < hist_val_cur) && (hist_val_new <= hist_val_cur))		// peak
 		{
 			g_max[g_count] = hist_val_cur;
 			max_count_new++;
+			// cout << "max found at bin " << hist->FindBin(i) << endl;
 		}
 		else
-		if ((hist_val_cur < hist_val_old) && (hist_val_cur <= hist_val_new))		// min
+		if ((hist_val_cur <= hist_val_old) && (hist_val_cur < hist_val_new))		// min
 		{
 			g_min[g_count] = hist_val_cur;
 			g_count++;
 			min_count_new++;
+			// cout << "min found at bin " << hist->FindBin(i) << endl;
 		}
 
 		// if (hist_val >= hist_val_old)
@@ -360,8 +362,8 @@ void get_s_curve()
 		}
 
 		// g_gauge_count[i] = max_count - min_count;
-		cout << min_count << "\t" << max_count << endl;
-		cout << "iiiiiiiiiiiiiiiiiiiiiii " << i << endl;
+		// cout << min_count << "\t" << max_count << endl;
+		// cout << "iiiiiiiiiiiiiiiiiiiiiii " << i << endl;
 		s_curve->SetBinContent(s_curve->FindBin(i), max_count - min_count);
 
 	}
