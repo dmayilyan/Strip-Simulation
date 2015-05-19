@@ -3,7 +3,7 @@
 #define tau			100				// Given in ns
 #define GATE		10000/*00000*/		// Gate size in ns
 #define gaus_rms	240				// RMS of gaussian noise spread
-#define num_pulses	3/*0*/			// Number of pulses
+#define num_pulses	1/*0*/			// Number of pulses
 #define exp_tau		100				// D.qecay time in ns
 
 #define COUNT_RATE	1		// Counting rate in kHz
@@ -56,7 +56,7 @@ Double_t get_Q(Double_t pos)
 	}
 	else if ((pos > p) && (pos < p+d))
 	{
-		Eff = Q_0 * (p+d-pos)/d + Q_0 * (pos-p)/d;
+		Eff = Q_0 * (p+d-p101010os)/d + Q_0 * (pos-p)/d;
 		// cout << pos << " First sharing region; Q = " << Eff << endl;
 	}
 	else if ((pos > 2*p) && (pos < 2*p + d))
@@ -159,43 +159,37 @@ void get_s_curve()
 	bool peak_found = false;
 	int min_val = 0;
 
-	// int *hist_max_val;
 	int hist_max_val = hist->GetBinContent(hist->GetMaximumBin());
 
 	cout << hist->GetMaximum() << " That's the max val" << endl;
-	// int *g_gauge_count = (int*)malloc(3000*sizeof(int));
-	int g_gauge_count = 3000;
-	// if(g_gauge_count==NULL)
-	// {
-	// 	printf("Error! memory not allocated.");
-	// 	exit(0);
-	// }
+
+	int *g_gauge_count = (int*)malloc(hist_max_val*sizeof(int));
+	if(g_gauge_count==NULL)
+	{
+		printf("Error! memory not allocated.");
+		exit(0);
+	}
 
 	cout << "hist_max_val " << hist_max_val << endl;
 
-	// int g_gauge_count[hist_max_val] = {0,};
-	// static const int X_COUNT = hist->GetNbinsX();
-	int X_COUNT = 5000
-	// int X_COUNT = 1000;
+	int X_COUNT = hist->GetNbinsX();
 
-	// double g_min[X_COUNT]={0.,};
-	// int *g_min = (int*)malloc(3000*sizeof(int));
-	int g_min[10000];
-	// if(g_min==NULL)
-	// {
-	// 	printf("Error! memory not allocated.");
-	// 	exit(0);
-	// }
+	int *g_min = (int*)malloc(X_COUNT*sizeof(int));
+	if(g_min==NULL)
+	{
+		printf("Error! memory not allocated.");
+		exit(0);
+	}
 
-	// double g_max[X_COUNT]={0.,};
-	// int *g_max = (int*)malloc(3000*sizeof(int));
-	int g_max[10000];
-	// if(g_max==NULL)
-	// {
-	// 	printf("Error! memory not allocated.");
-	// 	exit(0);
-	// }
+	int *g_max = (int*)malloc(X_COUNT*sizeof(int));
+	if(g_max==NULL)
+	{
+		printf("Error! memory not allocated.");
+		exit(0);
+	}
 
+	int min_count_new = 0;
+	int max_count_new = 0;
 	int g_count = 0;
 	hist_val_old = hist->GetBinContent(0);
 	for (int i = 1; i < X_COUNT-1; i++)
@@ -212,19 +206,20 @@ void get_s_curve()
 		// cout << i << " hist_val_old " << hist_val_old << endl;
 		// hist_val_old = hist_val;
 
-		cout << "CHECKPOINT\n";
+		// cout << "CHECKPOINT\n";
 
-		cout << g_count << endl;
 		// suppose first comes a peak
 		if ((hist_val_old <= hist_val_cur) && (hist_val_new < hist_val_cur))		// peak
 		{
 			g_max[g_count] = hist_val_cur;
+			max_count_new++;
 		}
 		else
-		if ((hist_val_cur <= hist_val_old) && (hist_val_cur < hist_val_new))		// min
+		if ((hist_val_cur < hist_val_old) && (hist_val_cur <= hist_val_new))		// min
 		{
 			g_min[g_count] = hist_val_cur;
 			g_count++;
+			min_count_new++;
 		}
 
 		// if (hist_val >= hist_val_old)
@@ -349,29 +344,37 @@ void get_s_curve()
 
 	}
 
-	for (int i = 1; i <= hist_max_val; i++)
+	cout << g_count << "@*&($#@!&*^$$)(*#@$(*&" << endl;
+	cout << "min_count_new " << min_count_new << " max_count_new " << max_count_new << endl;
+
+	for (int i = 1; i < hist_max_val; i++)
 	{
 		int min_count = 0;
 		int max_count = 0;
-		for (int j = 0; j < (const)g_count + 1; j++)
+		for (int j = 0; j < g_count; j++)
 		{
 			if (g_min[j] >= i)
 				min_count++;
 			if (g_max[j] >= i)
-			{
 				max_count++;
-			}
 		}
 
-		g_gauge_count[i] = max_count - min_count;
+		// g_gauge_count[i] = max_count - min_count;
+		cout << min_count << "\t" << max_count << endl;
+		cout << "iiiiiiiiiiiiiiiiiiiiiii " << i << endl;
+		s_curve->SetBinContent(s_curve->FindBin(i), max_count - min_count);
+
 	}
 
 
 	s_curve->Draw();
 
-	free(g_gauge_count);
-	free(g_min);
-	free(g_max);
+	if (g_gauge_count)
+		free(g_gauge_count);
+	if (g_min)
+		free(g_min);
+	if (g_max)
+		free(g_max);
 
 }
 
