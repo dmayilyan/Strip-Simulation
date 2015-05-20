@@ -3,7 +3,7 @@
 #define tau			100				// Given in ns
 #define GATE		10000/*00000*/		// Gate size in ns
 #define gaus_rms	240				// RMS of gaussian noise spread
-#define num_pulses	10/*000*/			// Number of pulses
+#define num_pulses	2/*000*/			// Number of pulses
 #define exp_tau		100				// D.qecay time in ns
 
 #define COUNT_RATE	1		// Counting rate in kHz
@@ -23,7 +23,7 @@ double Eff = 0;
 
 double Q = 0;
 
-TH1F *hist = new TH1F("hist", "Signal data", GATE/2, 0, GATE);
+TH1I *hist = new TH1I("hist", "Signal data", GATE/2, 0, GATE);
 TH1F *en_hist = new TH1F("en_hist", "Energy data", 2000, 0, 2000);
 
 ///////////////////////////////////////////////////
@@ -114,9 +114,9 @@ Double_t exp_func(Double_t *x, Double_t *par)
 	return f;
 }
 
-TH1F * get_exp(Double_t tau, Double_t Eff)
+TH1I * get_exp(Double_t tau, Double_t Eff)
 {
-	TH1F* loc_hist = new TH1F("loc_hist", "Single pulse", 1000/2, 0, 1000);
+	TH1I* loc_hist = new TH1I("loc_hist", "Single pulse", 1000/2, 0, 1000);
 
 	// cout << start_point << "\t" << tau << "\t" << Q << endl;
 
@@ -148,10 +148,14 @@ void get_s_curve()
 
 	TH1F* s_curve = new TH1F("s_curve", "S Curve", 10000/2, 0, 10000); // 2 is missing
 
-	int hist_val_old = 0.;
-	int hist_val_cur = 0.;
-	int hist_val_new = 0.;
-	int hist_val = 0.;
+	int hist_val_old = 0;
+	int hist_val_cur = 0;
+	int hist_val_new = 0;
+	int hist_val = 0;
+
+	int hist_x_val_old = 0;
+	int hist_x_val_cur = 0;
+	int hist_x_val_new = 0;
 
 	int prev_index = 0;
 	int next_index = 0;
@@ -191,16 +195,21 @@ void get_s_curve()
 	int min_count_new = 0;
 	int max_count_new = 0;
 	int g_count = 0;
-	hist_val_old = hist->GetBinContent(0);
+	// hist_val_old = hist->GetBinContent(0);
+	cout << "X_COUNT " << hist->FindBin(X_COUNT) << endl;
+	int j = 0;
 	for (int i = 1; i < X_COUNT-1; i++)
 	{
-		if (i != 1)
-			hist_val_old = hist->GetBinContent(i-1);
 
+		hist_val_old = hist->GetBinContent(i-1);
 		hist_val_cur = hist->GetBinContent(i);
 		hist_val_new = hist->GetBinContent(i+1);
 
-		// cout <<  hist_val_old << hist_val_cur << hist_val_new << endl;
+		hist_x_val_old = hist_val_old;
+		hist_x_val_cur = hist->GetBinContent(j);
+		hist_x_val_new = hist->GetBinContent(j+1);
+
+		cout << "HIST VAL " << hist_val_cur << endl;
 
 		// cout << "GetbinX " << hist->GetNbinsX() << endl;
 		// cout << i << " hist_val_old " << hist_val_old << endl;
@@ -208,15 +217,31 @@ void get_s_curve()
 
 		// cout << "CHECKPOINT\n";
 
+		j = i;
+		while((hist_x_val_cur == hist_val_old) && (j < X_COUNT-1))
+			j++;
+		if (X_COUNT == j)
+			break;
+		hist_val_cur = hist_x_val_cur;
+
+		// find next level
+		j++;
+		while((hist_x_val_cur == hist_val_cur) && (j < X_COUNT-1))
+			j++;
+		if (X_COUNT == j)
+			break;
+		hist_val_new = hist_x_val_cur;
+
+
 		// suppose first comes a peak
-		if ((hist_val_old < hist_val_cur) && (hist_val_new <= hist_val_cur))		// peak
+		if ((hist_val_old <= hist_val_cur) && (hist_val_new < hist_val_cur) && ((hist_val_old > 0) && (hist_val_new > 0)) )		// peak
 		{
 			g_max[g_count] = hist_val_cur;
 			max_count_new++;
 			// cout << "max found at bin " << hist->FindBin(i) << endl;
 		}
 		else
-		if ((hist_val_cur <= hist_val_old) && (hist_val_cur < hist_val_new))		// min
+		if ((hist_val_cur < hist_val_old) && (hist_val_cur <= hist_val_new) /*&& ((hist_val_old > 0) || (hist_val_new > 0))*/ )		// min
 		{
 			g_min[g_count] = hist_val_cur;
 			g_count++;
@@ -346,7 +371,7 @@ void get_s_curve()
 
 	}
 
-	cout << g_count << "@*&($#@!&*^$$)(*#@$(*&" << endl;
+	cout << g_count << " @*&($#@!&*^$$)(*#@$(*&" << endl;
 	cout << "min_count_new " << min_count_new << " max_count_new " << max_count_new << endl;
 
 	for (int i = 1; i < hist_max_val; i++)
