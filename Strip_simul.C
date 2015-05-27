@@ -1,11 +1,14 @@
 #define E_0			10000			// Energy of the photon in eV
 #define Q_0			E_0/3.6			// Number of electrons generated
-#define tau			100				// Given in ns
-#define GATE		10000/*00000*/		// Gate size in ns
-#define gaus_rms	240				// RMS of gaussian noise spread
-#define num_pulses	2/*000*/			// Number of pulses
-#define exp_tau		100				// D.qecay time in ns
+#define tau			80				// Given in ns
 
+#define gaus_rms	240				// RMS of gaussian noise spread
+
+// either n-photons or 
+#define GATE		1000000000		// Gate size in ns
+#define num_pulses	1000			// Number of pulses
+
+#define exp_tau		100				// Decay time in ns
 #define COUNT_RATE	1		// Counting rate in kHz
 
 #include <iostream>
@@ -196,20 +199,15 @@ void get_s_curve()
 	int max_count_new = 0;
 	int g_count = 0;
 	// hist_val_old = hist->GetBinContent(0);
-	cout << "X_COUNT " << hist->FindBin(X_COUNT) << endl;
+	// cout << "X_COUNT " << hist->FindBin(X_COUNT) << endl;
 	int j = 0;
-	for (int i = 1; i < X_COUNT-1; i++)
+	for (int i = 1; i < X_COUNT; i++)
 	{
 
 		hist_val_old = hist->GetBinContent(i-1);
-		hist_val_cur = hist->GetBinContent(i);
-		hist_val_new = hist->GetBinContent(i+1);
+		// hist_val_cur = hist->GetBinContent(i);
+		// hist_val_new = hist->GetBinContent(i+1);
 
-		hist_x_val_old = hist_val_old;
-		hist_x_val_cur = hist->GetBinContent(j);
-		hist_x_val_new = hist->GetBinContent(j+1);
-
-		cout << "HIST VAL " << hist_val_cur << endl;
 
 		// cout << "GetbinX " << hist->GetNbinsX() << endl;
 		// cout << i << " hist_val_old " << hist_val_old << endl;
@@ -218,34 +216,37 @@ void get_s_curve()
 		// cout << "CHECKPOINT\n";
 
 		j = i;
-		while((hist_x_val_cur == hist_val_old) && (j < X_COUNT-1))
+		while((hist->GetBinContent(j) == hist_val_old) && (j < X_COUNT))
 			j++;
 		if (X_COUNT == j)
 			break;
-		hist_val_cur = hist_x_val_cur;
+		hist_val_cur = hist->GetBinContent(j);
+
+		i = j;
 
 		// find next level
 		j++;
-		while((hist_x_val_cur == hist_val_cur) && (j < X_COUNT-1))
+		while((hist->GetBinContent(j) == hist_val_cur) && (j < X_COUNT))
 			j++;
 		if (X_COUNT == j)
 			break;
-		hist_val_new = hist_x_val_cur;
+		hist_val_new = hist->GetBinContent(j);
 
 
 		// suppose first comes a peak
-		if ((hist_val_old <= hist_val_cur) && (hist_val_new < hist_val_cur) && ((hist_val_old > 0) && (hist_val_new > 0)) )		// peak
+		if ((hist_val_old < hist_val_cur) && (hist_val_new < hist_val_cur) /*&& ((hist_val_old > 0) && (hist_val_new > 0))*/ )		// peak
 		{
 			g_max[g_count] = hist_val_cur;
 			max_count_new++;
 			// cout << "max found at bin " << hist->FindBin(i) << endl;
 		}
 		else
-		if ((hist_val_cur < hist_val_old) && (hist_val_cur <= hist_val_new) /*&& ((hist_val_old > 0) || (hist_val_new > 0))*/ )		// min
+		if ((hist_val_cur < hist_val_old) && (hist_val_cur < hist_val_new) /*&& ((hist_val_old > 0) && (hist_val_new > 0))*/ )		// min
 		{
 			g_min[g_count] = hist_val_cur;
 			g_count++;
 			min_count_new++;
+			// cout << i << " HIST VAL " << hist_val_new << endl;
 			// cout << "min found at bin " << hist->FindBin(i) << endl;
 		}
 
@@ -371,8 +372,8 @@ void get_s_curve()
 
 	}
 
-	cout << g_count << " @*&($#@!&*^$$)(*#@$(*&" << endl;
-	cout << "min_count_new " << min_count_new << " max_count_new " << max_count_new << endl;
+	// cout << g_count << " @*&($#@!&*^$$)(*#@$(*&" << endl;
+	// cout << "min_count_new " << min_count_new << " max_count_new " << max_count_new << endl;
 
 	for (int i = 1; i < hist_max_val; i++)
 	{
@@ -407,6 +408,8 @@ void get_s_curve()
 
 void main()
 {
+
+	TH1I *loc_hist;
 	// double x_graph[GATE] = {0,};
 	// double y[GATE] = {0,};
 
@@ -451,7 +454,7 @@ void main()
 		// get_exp(SP, 1000, 1000/*tau*/, Q, m);
 		// Start time, number of points, tau, Number of phot_el, histogram
 
-		get_exp(tau, Q);
+		loc_hist = get_exp(tau, Q);
 
 		// cout << "loc_hist " << loc_hist->GetNbinsX() << endl;
 		// cout << "hist " << hist->GetNbinsX() << endl;
@@ -469,10 +472,11 @@ void main()
 				// cout << "EXAV!!!\n";
 			}
 		}
+		delete loc_hist;
 		
 	}
 
-	hist->Draw();
+	// hist->Draw();
 	// c1->SaveAs("graph_shot.root");
 
 	// en_hist->Draw();
