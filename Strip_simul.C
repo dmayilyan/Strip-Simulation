@@ -121,24 +121,16 @@ TH1I * get_exp(Double_t tau, Double_t Eff)
 {
 	TH1I* loc_hist = new TH1I("loc_hist", "Single pulse", 1000/2, 0, 1000);
 
-	// cout << start_point << "\t" << tau << "\t" << Q << endl;
-
-	// Double_t gaus_noise = gRandom->Gaus(0,gaus_rms);
 	// Double_t f = (par[1] + gaus_noise) * xx * exp(-xx/par[0]);
 	Double_t gaus_noise = gRandom->Gaus(0,gaus_rms);
 
 	TF1 *expo = new TF1("Exp curve", exp_func, 0, 1000, 3);
-	expo -> SetParameters(tau, Eff, gaus_noise);
+	expo->SetParameters(tau, Eff, gaus_noise);
 	for (int ibin = 1; ibin < loc_hist->GetNbinsX()+1; ibin++)
-	{
 		loc_hist->SetBinContent(ibin,expo->Eval(loc_hist->GetBinCenter(ibin)));
-		// cout << expo->Eval(loc_hist->GetBinCenter(ibin)) << endl;
-	}
 
-	expo -> SetParNames("tau", "Q", "Gauss noise");
+	expo->SetParNames("tau", "Q", "Gauss noise");
 	en_hist->Fill(loc_hist->GetMaximum());
-	// cout << "loc_hist " << loc_hist->GetBinContent(23) << endl;
-	// loc_hist -> Draw();
 
 	return loc_hist;
 }
@@ -389,7 +381,6 @@ void get_s_curve()
 
 		// g_gauge_count[i] = max_count - min_count;
 		// cout << min_count << "\t" << max_count << endl;
-		// cout << "iiiiiiiiiiiiiiiiiiiiiii " << i << endl;
 		s_curve->SetBinContent(s_curve->FindBin(i), max_count - min_count);
 
 	}
@@ -410,30 +401,13 @@ void main()
 {
 
 	TH1I *loc_hist;
-	// double x_graph[GATE] = {0,};
-	// double y[GATE] = {0,};
 
-	// for (int i = 0; i < GATE; ++i)
-	// 	x_graph[i] = i;
-
-	// for (int i = 0; i < GATE; ++i)
-	// 	y[i] = 0;
-
-	// cout << "-(p+d)/2 " << -(p+d)/2 << "\t" << "-(p-d)/2 " << -(p-d)/2 << endl;
-	// cout << "-(p-d)/2 " << -(p-d)/2 << "\t" << "(p-d)/2 " << (p-d)/2 << endl;
-	// cout << "(p-d)/2 " << (p-d)/2 << "\t" << "(p+d)/2 " << (p+d)/2 << endl << endl;
-
-	double time_spread_mean = GATE / COUNT_RATE / 1000; // 1000 is for conversion to Hz
-	// cout << "Time spread mean " << time_spread_mean << endl << endl;
-
-	// TCanvas *c1 = new TCanvas();
+	// double time_spread_mean = GATE / COUNT_RATE / 1000; // 1000 is for conversion to Hz
 
 	for (int i = 0; i < num_pulses; i++)
 	{
-		// double T = gRandom->Poisson(10) /** GATE*/;
 		double Charge_pos = 0;
 		// double T = time_spread_mean - gRandom->Poisson(time_spread_mean);
-		// cout << "TIME SPREAD MEAN " << time_spread_mean << endl;
 		double T = gRandom->Exp(exp_tau);
 		int RP = gRandom->Rndm() * GATE/2;
 		int SP = RP + T;
@@ -441,24 +415,17 @@ void main()
 
 		// double T = gRandom->Rndm() * GATE;
 
-		// Version for 3 stripes
+		// Version for 3 strips
 		// Charge_pos = gRandom->Rndm() * (3*p+d);
 
-		// Version with one stripe
+		// Version with one strip
 		Charge_pos = gRandom->Rndm() * (p+d);
-		// Charge_pos = gRandom->Rndm() * 3*p+4*d - (3*p+4*d)/2;
 
 		// cout << "\nSP " << SP*2 << "\t";
 		double Q = get_Q(Charge_pos);
 
-		// get_exp(SP, 1000, 1000/*tau*/, Q, m);
-		// Start time, number of points, tau, Number of phot_el, histogram
-
 		loc_hist = get_exp(tau, Q);
 
-		// cout << "loc_hist " << loc_hist->GetNbinsX() << endl;
-		// cout << "hist " << hist->GetNbinsX() << endl;
-		// cout << "SP " << SP << endl;
 		for (int h_start = 0; h_start < loc_hist->GetNbinsX(); h_start++)
 		{
 			double start_pos = SP+h_start;
@@ -468,17 +435,18 @@ void main()
 			{
 				// Filling the bins with integers
 				hist->SetBinContent(start_pos, (int)hist->GetBinContent(start_pos) + (int)loc_hist->GetBinContent(h_start));
-				// cout << h_start << "\t" << loc_hist->GetBinContent(h_ssart) << endl;
-				// cout << "EXAV!!!\n";
 			}
 		}
 		delete loc_hist;
 		
 	}
 
+	// Uncumment to see the signal
 	// hist->Draw();
+	// Expanding signal out
 	// c1->SaveAs("graph_shot.root");
 
+	// Drawing the energy
 	// en_hist->Draw();
 	// Analysis of the data
 	// Making the S-curve
