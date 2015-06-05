@@ -1,24 +1,27 @@
-#define E_0			10000			// Energy of the photon in eV
-#define Q_0			E_0/3.6			// Number of electrons generated
-#define tau			80				// Given in ns
-
-#define gaus_rms	240				// RMS of gaussian noise spread
-
-// either n-photons or 
-#define GATE		1000000000		// Gate size in ns
-#define num_pulses	1000			// Number of pulses
-
-#define exp_tau		100				// Decay time in ns
-#define COUNT_RATE	1		// Counting rate in kHz
-
 #include <iostream>
 using namespace::std;
+#include "TCanvas.h"
 #include "TF1.h"
 #include "TH1.h"
 #include "TH1F.h"
 #include "TMath.h"
 #include "math.h"
 #include "TRandom.h"
+
+
+#define E_0			10000			// Energy of the photon in eV
+#define Q_0			E_0/3.6			// Number of electrons generated
+#define TAU			80				// Given in ns
+
+#define GAUS_RMS	240				// RMS of gaussian noise spread
+
+// either n-photons or 
+#define GATE		1000000000		// Gate size in ns
+#define NUM_PULSES	1000			// Number of pulses
+
+#define EXP_TAU		100				// Decay time in ns
+#define COUNT_RATE	1				// Counting rate in kHz
+
 
 double p = 50;
 double d = 17;
@@ -79,26 +82,21 @@ Double_t get_Q(Double_t pos)
 
 Double_t get_Q(Double_t pos)
 {
-	// double Q_0 = 3000;	// Number of electrons generated
-
 
 	if ((pos >=d) && (pos <= p))
 	{
 		// Flat part
 		Eff = Q_0;
-		// cout << pos << " Middle region; Q = " << Eff << endl;
 	}
 	else if (pos < d)
 	{
 		// Left slope
 		Eff = Q_0 * pos/d;
-		// cout << pos << " Left slope region; Q = " << Eff << endl;
 	}
 	else if ((pos > p) && (pos < p+d))
 	{
 		// Right slope
 		Eff = Q_0 * (p+d-pos)/d;
-		// cout << pos << " First sharing region; Q = " << Eff << endl;
 	}
 	else
 		Eff = 0;
@@ -117,19 +115,19 @@ Double_t exp_func(Double_t *x, Double_t *par)
 	return f;
 }
 
-TH1I * get_exp(Double_t tau, Double_t Eff)
+TH1I* get_exp(int tau_l, Double_t Eff)
 {
 	TH1I* loc_hist = new TH1I("loc_hist", "Single pulse", 1000/2, 0, 1000);
 
 	// Double_t f = (par[1] + gaus_noise) * xx * exp(-xx/par[0]);
-	Double_t gaus_noise = gRandom->Gaus(0,gaus_rms);
+	Double_t gaus_noise = gRandom->Gaus(0,GAUS_RMS);
 
 	TF1 *expo = new TF1("Exp curve", exp_func, 0, 1000, 3);
-	expo->SetParameters(tau, Eff, gaus_noise);
+	expo->SetParameters(tau_l, Eff, gaus_noise);
 	for (int ibin = 1; ibin < loc_hist->GetNbinsX()+1; ibin++)
 		loc_hist->SetBinContent(ibin,expo->Eval(loc_hist->GetBinCenter(ibin)));
 
-	expo->SetParNames("tau", "Q", "Gauss noise");
+	expo->SetParNames("tau_l", "Q", "Gauss noise");
 	en_hist->Fill(loc_hist->GetMaximum());
 
 	return loc_hist;
@@ -139,24 +137,13 @@ void get_s_curve()
 {
 	TCanvas *c2 = new TCanvas("S Curve");
 
-	double peakcount[10000] = {0,};
 
-	TH1F* s_curve = new TH1F("s_curve", "S Curve", 10000/2, 0, 10000); // 2 is missing
+	TH1F* s_curve = new TH1F("s_curve", "S Curve", 10000/2, 0, 10000);
 
 	int hist_val_old = 0;
 	int hist_val_cur = 0;
 	int hist_val_new = 0;
-	int hist_val = 0;
 
-	int hist_x_val_old = 0;
-	int hist_x_val_cur = 0;
-	int hist_x_val_new = 0;
-
-	int prev_index = 0;
-	int next_index = 0;
-	int index = 0;
-	bool peak_found = false;
-	int min_val = 0;
 
 	int hist_max_val = hist->GetBinContent(hist->GetMaximumBin());
 
@@ -174,38 +161,28 @@ void get_s_curve()
 	int X_COUNT = hist->GetNbinsX();
 
 	int *g_min = (int*)malloc(X_COUNT*sizeof(int));
-	if(g_min==NULL)
+	if(!g_gauge_count)
 	{
-		printf("Error! memory not allocated.");
+		cout << "Error! memory not allocated.";
 		exit(0);
 	}
 
 	int *g_max = (int*)malloc(X_COUNT*sizeof(int));
-	if(g_max==NULL)
+	if(!g_gauge_count)
 	{
-		printf("Error! memory not allocated.");
+		cout << "Error! memory not allocated.";
 		exit(0);
 	}
 
 	int min_count_new = 0;
 	int max_count_new = 0;
 	int g_count = 0;
-	// hist_val_old = hist->GetBinContent(0);
-	// cout << "X_COUNT " << hist->FindBin(X_COUNT) << endl;
+
 	int j = 0;
 	for (int i = 1; i < X_COUNT; i++)
 	{
 
 		hist_val_old = hist->GetBinContent(i-1);
-		// hist_val_cur = hist->GetBinContent(i);
-		// hist_val_new = hist->GetBinContent(i+1);
-
-
-		// cout << "GetbinX " << hist->GetNbinsX() << endl;
-		// cout << i << " hist_val_old " << hist_val_old << endl;
-		// hist_val_old = hist_val;
-
-		// cout << "CHECKPOINT\n";
 
 		j = i;
 		while((hist->GetBinContent(j) == hist_val_old) && (j < X_COUNT))
@@ -242,126 +219,6 @@ void get_s_curve()
 			// cout << "min found at bin " << hist->FindBin(i) << endl;
 		}
 
-		// if (hist_val >= hist_val_old)
-		// {
-		// 	hist_val_old = hist_val;
-
-		// 	if (min_val != 0)
-		// 		min_val = hist_val_old;
-
-		// 	for (int j = hist_val; j >= min_val; j--)
-		// 	{
-		// 		if (j!=0)
-		// 		cout << j << " j\n";
-		// 		double s_content = s_curve->GetBinContent(s_curve->FindBin(j))+1;
-		// 		s_curve->SetBinContent(s_curve->FindBin(j),s_content);
-		// 	}		
-		// }
-		// else
-		// {
-		// 	hist_val_old = hist_val;
-
-		// 	min_val = hist_val;
-		// }
-
-		// if (hist_val >= hist_val_old)
-		// {
-		// 	// cout << i << " hist_val " << hist_val << endl;
-			
-		// 	hist_val_old = hist_val;
-		// 	peak_found = false;
-
-		// 	min_val = 0;
-		// 	// continue;
-
-		// }
-		// else
-		// {
-		// 	hist_val_old = hist_val;
-		// 	peak_found = true;
-
-		// 	min_val = hist_val;
-		// 	cout << "ABRACADABRA\n";
-		// }
-
-		// if (peak_found)
-		// {
-		// 	cout << "min_val " << min_val << endl;
-		// 	for (int j = hist_val-1; j >= min_val; j--)
-		// 	{
-		// 		double s_content = s_curve->GetBinContent(j)+1;
-		// 		s_curve->SetBinContent(j,s_content);
-		// 	}
-		// }
-
-		// if ((hist_val >= hist_val_old) && (hist_val != 0))
-		// {
-		// 	hist_val_old = hist_val;
-		// 	// next_index = i;
-		// 	// if (i == 0)
-		// 	// 	prev_index = next_index;
-
-		// 	// cout << i << " hist_val " << hist_val << endl;
-
-		// 	// double s_content = s_curve->GetBinContent(hist_val)+1;
-		// 	// s_curve->SetBinContent(hist_val,s_content);
-		// 	// cout << "! " << i << endl;
-
-		// 	if (i != (next_index+1))
-		// 	{
-		// 		index = hist->GetBinContent(next_index);
-		// 		// cout << index << " կա\n";
-		// 	}
-		// 	else
-		// 	{
-		// 		index = 0;
-		// 		// cout << "չկա\n";				
-		// 	}
-
-		// 	// cout << i << "\t" << hist->GetBinContent(i) << endl;
-
-		// 	// cout << "index " << index << endl;
-		// 	if (peak_found)
-		// 	{
-
-		// 		for (int j = hist_val; j >= index; j--)
-		// 		{
-		// 			// peakcount[j] += 1;
-		// 			int j = hist_val;
-		// 			double s_content = s_curve->GetBinContent(j)+1;
-		// 			s_curve->SetBinContent(j,s_content);
-		// 			// cout << "s_content " << s_content << endl;
-		// 		}
-
-		// 		peak_found = false;
-		// 	}
-
-		// }
-		// else
-		// {
-		// 	hist_val_old = hist_val;
-		// 	// next_index = i;
-		// 	// if (i == 0)
-		// 	// 	prev_index = next_index;
-
-		// 	peak_found = true;
-		// 	next_index = i;
-		// 	// cout << "Next index " << next_index << endl;
-		// 	// cout << "lowering " << i*2 << "\t" << hist->GetBinContent(i) << endl;
-
-		// 	continue;
-			
-		// 	// peakcount[hist_val] += 1;
-
-		// 	// for (int j = hist_val-1; j >= 0; j--)
-		// 	// {
-		// 	// 	peakcount[j] += 1;
-		// 	// 	double s_content = s_curve->GetBinContent(j)+1;
-		// 	// 	s_curve->SetBinContent(j,s_content);
-		// 	// 	// cout << "s_content " << s_content << endl;
-		// 	// }
-		// }
-
 	}
 
 	// cout << g_count << " @*&($#@!&*^$$)(*#@$(*&" << endl;
@@ -397,18 +254,18 @@ void get_s_curve()
 
 }
 
-void main()
+int main()
 {
 
 	TH1I *loc_hist;
 
 	// double time_spread_mean = GATE / COUNT_RATE / 1000; // 1000 is for conversion to Hz
 
-	for (int i = 0; i < num_pulses; i++)
+	for (int i = 0; i < NUM_PULSES; i++)
 	{
 		double Charge_pos = 0;
 		// double T = time_spread_mean - gRandom->Poisson(time_spread_mean);
-		double T = gRandom->Exp(exp_tau);
+		double T = /*gRandom->*/ TMath::Exp(EXP_TAU);
 		int RP = gRandom->Rndm() * GATE/2;
 		int SP = RP + T;
 		// cout << RP << "\t" << T << endl;
@@ -424,7 +281,7 @@ void main()
 		// cout << "\nSP " << SP*2 << "\t";
 		double Q = get_Q(Charge_pos);
 
-		loc_hist = get_exp(tau, Q);
+		loc_hist = get_exp(TAU, Q);
 
 		for (int h_start = 0; h_start < loc_hist->GetNbinsX(); h_start++)
 		{
@@ -452,5 +309,7 @@ void main()
 	// Making the S-curve
 
 	get_s_curve();
+
+	return 0;
 
 }
