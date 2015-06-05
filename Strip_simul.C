@@ -90,13 +90,13 @@ Double_t get_Q(Double_t pos)
 	}
 	else if (pos < d)
 	{
-		// Left slope /
+		// Left slope
 		Eff = Q_0 * pos/d;
 		// cout << pos << " Left slope region; Q = " << Eff << endl;
 	}
 	else if ((pos > p) && (pos < p+d))
 	{
-		// Right slope \
+		// Right slope
 		Eff = Q_0 * (p+d-pos)/d;
 		// cout << pos << " First sharing region; Q = " << Eff << endl;
 	}
