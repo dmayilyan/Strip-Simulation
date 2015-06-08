@@ -3,6 +3,7 @@ using namespace::std;
 #include "TCanvas.h"
 #include "TF1.h"
 #include "TH1.h"
+#include "TH1I.h"
 #include "TH1F.h"
 #include "TMath.h"
 #include "math.h"
@@ -13,7 +14,7 @@ using namespace::std;
 #define Q_0			E_0/3.6			// Number of electrons generated
 #define TAU			80				// Given in ns
 
-#define GAUS_RMS	240				// RMS of gaussian noise spread
+#define GAUSS_RMS	240				// RMS of gaussian noise spread
 
 // either n-photons or 
 #define GATE		1000000000		// Gate size in ns
@@ -120,7 +121,7 @@ TH1I* get_exp(int tau_l, Double_t Eff)
 	TH1I* loc_hist = new TH1I("loc_hist", "Single pulse", 1000/2, 0, 1000);
 
 	// Double_t f = (par[1] + gaus_noise) * xx * exp(-xx/par[0]);
-	Double_t gaus_noise = gRandom->Gaus(0,GAUS_RMS);
+	Double_t gaus_noise = gRandom->Gaus(0,GAUSS_RMS);
 
 	TF1 *expo = new TF1("Exp curve", exp_func, 0, 1000, 3);
 	expo->SetParameters(tau_l, Eff, gaus_noise);
@@ -174,10 +175,7 @@ void get_s_curve()
 		exit(0);
 	}
 
-	int min_count_new = 0;
-	int max_count_new = 0;
 	int g_count = 0;
-
 	int j = 0;
 	for (int i = 1; i < X_COUNT; i++)
 	{
@@ -206,23 +204,15 @@ void get_s_curve()
 		if ((hist_val_old < hist_val_cur) && (hist_val_new < hist_val_cur) /*&& ((hist_val_old > 0) && (hist_val_new > 0))*/ )		// peak
 		{
 			g_max[g_count] = hist_val_cur;
-			max_count_new++;
-			// cout << "max found at bin " << hist->FindBin(i) << endl;
 		}
 		else
 		if ((hist_val_cur < hist_val_old) && (hist_val_cur < hist_val_new) /*&& ((hist_val_old > 0) && (hist_val_new > 0))*/ )		// min
 		{
 			g_min[g_count] = hist_val_cur;
 			g_count++;
-			min_count_new++;
-			// cout << i << " HIST VAL " << hist_val_new << endl;
-			// cout << "min found at bin " << hist->FindBin(i) << endl;
 		}
 
 	}
-
-	// cout << g_count << " @*&($#@!&*^$$)(*#@$(*&" << endl;
-	// cout << "min_count_new " << min_count_new << " max_count_new " << max_count_new << endl;
 
 	for (int i = 1; i < hist_max_val; i++)
 	{
@@ -254,7 +244,7 @@ void get_s_curve()
 
 }
 
-int main()
+void main()
 {
 
 	TH1I *loc_hist;
@@ -310,6 +300,6 @@ int main()
 
 	get_s_curve();
 
-	return 0;
+	// return 0;
 
 }
