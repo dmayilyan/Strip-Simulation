@@ -43,26 +43,12 @@ void get_dec_time()
 	gr_dec->SetMarkerColor(kRed+1);
 	gr_dec_exp->SetMarkerColor(kBlue+1);
 
-	// cout << par0 << "\t" << par1 << endl;
-
-	// f1->Eval();
-
 }
 
 int run(int dec_time_ns = 85)
 {
 	char filename[16];
 	snprintf(filename, sizeof(filename), "rate_%d.dat", dec_time_ns);
-
-	// Int_t low_edge, high_edge = 0;
-	// TString the_output;
-	// // Getting channel min and max for 14 keV
-	// the_output = gSystem->GetFromPipe("ls -S ./filter | sed 's/^filter_scan_12400eV_\([0-9]*\).raw$/\1/' | head -1");
-	// low_edge = the_output.Atoi();
-	// the_output = gSystem->GetFromPipe("ls -S ./filter | sed 's/^filter_scan_12400eV_\([0-9]*\).raw$/\1/' | tail -1");
-	// high_edge = the_output.Atoi();
-
-	// cout << low_edge << "\t" << high_edge <<  endl;
 
 	cout << "\n////////////////////////////////////////////////////////////////////////////////\n\n";
 	cout << "Opening filtering files!\n";
@@ -77,15 +63,12 @@ int run(int dec_time_ns = 85)
 		for (int Xrow = 20; Xrow < 120; Xrow++)
 		{
 			double cell_content = hist_2d->GetBinContent(Xrow,channel);
-			// cout << hist_2d->GetBinContent(Xrow,channel) << endl;
 			av_x[channel-1] += cell_content;
 			av_x_err[channel-1] += cell_content*cell_content;
 		}
-		// cout << "count " << count << endl;
 
 		av_x[channel-1] /= 100; // 120-20
 		av_x_err[channel-1] = sqrt(av_x[channel-1]) / 100;
-		// cout << av_x[channel-1];
 
 		// cout << hist_2d->GetBinContent(20,channel) << "\t" << hist_2d->GetBinContent(599,channel) << endl;
 		// cout << hist_2d->GetBinContent(20,channel) << "\t" << hist_2d->GetBinContent(598,channel) << "\t" << av_x[channel-1] << endl;
@@ -93,8 +76,6 @@ int run(int dec_time_ns = 85)
 	}
 
 	cout << "\n\n";
-
-	// return 0;
 
 	gr1 = new TGraph();
 	gr2 = new TGraphErrors();
@@ -147,8 +128,6 @@ int run(int dec_time_ns = 85)
 			if ((i-1)%41==40)
 			{
 				gr->Draw("A*");
-				// gr->GetXaxis()->SetNdivisions(1020);
-				// gr->GetYaxis()->SetNdivisions(1020);
 				c1->SetGridx();
 				c1->SetGridy();
 
@@ -159,13 +138,9 @@ int run(int dec_time_ns = 85)
 				// f1->SetParLimits(0,-0.1,0.1);
 				gr->Fit("f1", "RCQ");
 	
-				// return 0;
-				// cout << x[0] << " x[0]\n";
 				f1->SetRange(x[40],x[0]);
 				f1->Draw("SAME R");
-	
-				// return 0;
-				
+					
 				for (int j = 0; j < last_item; j++)
 				{
 					x_eval[j] = f1->Eval(x[j]);
@@ -202,31 +177,6 @@ int run(int dec_time_ns = 85)
 
 	cout << max_ratio << " max_ratio\n";
 
-	// double qx;
-	// double qy;
-	// gr2->GetPoint(1,qx,qy);
-	// cout << qx << "\t" << qy << endl;
-
-
-	// // plotting adjusted rate
-	// TCanvas *c2 = new TCanvas("qwe");
-	// gr2->Draw("A*");
-	// // TF1 *expofunc = new TF1("expofunc","exp(-[0]*x)",x_eval[0],x_eval[last_item-1]);
-	// TF1 *expofunc = new TF1("expofunc","[0]+[1]*exp(-[2]-[3]*x)",x_eval[0],x_eval[last_item-1]);
-	// expofunc->SetParameters(4e6,-3e6,-0.1,3e-7);
-	// expofunc->FixParameter(2,0);
-	// gr2->Fit("expofunc");
-
-	// fit_lev = 0;
-	// thresh_found = false;
-	// for (int j = 0; j <= 40; j++)
-	// 	if ((x_ratio >= 10000)  && (thresh_found == false))
-	// 	{
-	// 		fit_lev = j;
-	// 		cout << fit_lev << " fit_lev!!!\n";
-	// 		thresh_found = true;
-	// 	}
-
 	// plotting rate ratio
 	TCanvas *c3 = new TCanvas("Ratio");
 	gr3->Draw("A*");
@@ -235,10 +185,6 @@ int run(int dec_time_ns = 85)
 	gr3->Fit("exp_fit", "R");
 	double exp_par0 = exp_fit->GetParameter(0);
 	double exp_par0_err = exp_fit->GetParError(0);
-	// cout << exp_par1 << "qweqwe\n";
-	// gr3->Fit("exp_fit" "RB");
-
-	// return 0;
 
 
 	// TCanvas *c2 = new TCanvas("decay");
@@ -246,7 +192,6 @@ int run(int dec_time_ns = 85)
 	// TF1 *exp_expo = new TF1("f2","pol1",x_ratio[0],x_ratio[40]);
 
 	// return 0;
-
 
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -267,7 +212,6 @@ int run(int dec_time_ns = 85)
 	
 	TCanvas *c3 = new TCanvas("Simulation data");
 	gr4 = new TGraphErrors();
-
 	gr5 = new TGraphErrors();
 
 	char line[1024] = {0};
@@ -318,22 +262,13 @@ int run(int dec_time_ns = 85)
 		// cout << r << "\t" << tc << "\t" << c << " QWE\n";
 		tc = tc*coll_corr;
 
-		x2[dc] = /*tc*max_r/*/r*coll_corr*1000;
-		y2[dc] = c/tc/**max_r/r*/;
-		// x2_err[dc] = sqrt(tc)*max_r/r;
-		// y2_err[dc] = sqrt(c)*max_r/r;
+		x2[dc] = r*coll_corr*1000;
+		y2[dc] = c/tc;
 		x2_err[dc] = sqrt(r)*coll_corr;
-		y2_err[dc] = /*sqrt(c/tc)*/sqrt(1/c+1/tc);
-
-		// cout << x2[dc] << "\t" << y2[dc] << "\n";
-
-		// gr4->SetPoint(dc, y2[dc], x2[dc]/y2[dc]);
-		// gr4->SetPointError(dc, sqrt(c/tc));
+		y2_err[dc] = sqrt(1/c+1/tc);
 
 		gr4->SetPoint(dc,x2[dc],y2[dc]);
 		gr4->SetPointError(dc,x2_err[dc],y2_err[dc]);
-
-		// gr4->SetPoint(dc,y2[dc],x2[dc]);
 
 		dc++;
 
@@ -341,8 +276,6 @@ int run(int dec_time_ns = 85)
 	}
 
 	f.close();
-
-	// return 0;
 
 	int fit_lev = 0;
 	for (int i = 0; i <= dc; i++)
@@ -355,20 +288,6 @@ int run(int dec_time_ns = 85)
 		}
 
 	}
-
-	// cout << dc << " dc\n";
-	// gr4->Draw("SAME A*");
-	// cout << max_r << " MAX\n";
-
-	// return 0;
-
-	// TF1 *f2 = new TF1("f2","pol1",x2[0],x2[fit_lev]);
-	// // TF1 *f2 = new TF1("f2","pol1",y2[/*22*/178],y2[200]);
-	// gr4->Fit("f2", "R");
-	// // double sim_par0 = exp_fit->GetParameter(0);
-	// // double sim_par1 = exp_fit->GetParameter(1);
-	// gr4->GetXaxis()->SetRangeUser(0,x2[fit_lev]);
-
 
 	// TCanvas *c3 = new TCanvas("Ratio sim");
 	gr4->Draw("A*");
