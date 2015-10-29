@@ -8,6 +8,8 @@ using namespace::std;
 #include "math.h"
 #include "TRandom.h"
 
+// #include "$ROOTSYS/test/libEvent.so"
+
 // #include "/home/bottle/Documents/PhD/energyCalibration.cpp"
 #include "/home/l_mayilyan/Documents/PhD/workspace/sls_detectors_package/slsDetectorCalibration/energyCalibration.cpp"
 
@@ -118,10 +120,10 @@ Double_t exp_func(Double_t *x, Double_t *par)
 
 TH1F *get_exp(int sig_dec_time)
 {
-	TH1F* loc_hist = new TH1F("loc_hist", "Single pulse", 1500/SCALING_SIZE, 0, 1500);
+	TH1F* loc_hist = new TH1F("loc_hist", "Single pulse", 1000/SCALING_SIZE, 0, 1000);
 	double loc_hist_val;
 
-	TF1 *expo = new TF1("Exp curve", exp_func, 0, 1500, 1);
+	TF1 *expo = new TF1("Exp curve", exp_func, 0, 1000, 1);
 	expo->SetParameter(0,sig_dec_time);
 	// Creating local histograms from the function
 	for (int ibin = 1; ibin < loc_hist->GetNbinsX()+1; ibin++)
@@ -420,28 +422,18 @@ TH1F *waveform(int E_0, double gauss_rms, int sig_dec_time, int count_rate, int 
 	// Drawing the energy distribution
 	// en_hist->Draw();
 
-	// cout << gate << endl;
-	// hist->Draw();
+	cout << "Filling the tree...\n";
+	rate=count_rate;
+	hh=hist;
 
-	// TFile hfile("rate_scan.root","RECREATE","Rate scan for 14 KeV");
-	// int rn = 5;
-	// TTree *Tr = new TTree("Tr","Tree of waveforms for 14KeV");
+	Tr->Fill();
 
-	// // TH1F *hp;
-	// // Tr->Branch("hist", "TH1F", &hp, 32000, 0);
-	// // hp=hist;
-
-	// Tr->Branch("rn", &rn, 16000);
-	// Tr->Branch("hist", "TH1F", &hist, 32000, 0);
-
-	// // rn =
-
-
-	// Tr->Fill();
-
-	// Tr->Print();
+	Tr->Print();
 	// hfile.Write();
-	// // create_wf(hist, count_rate);
+
+	// hfile.Close();
+
+	// create_wf(hist, count_rate);
 
 	// return h0;
 	return hist;
@@ -453,25 +445,45 @@ void read_tree()
 	TFile *f = new TFile("rate_scan.root");
 	TTree *Tr = (TTree*)f->Get("Tr");
 	TH1F *hist = 0;
-	int rn;
+	// int count_rate;
 
-	Tr->SetBranchAddress("rn",&rn);
+	// Tr->SetBranchAddress("rate",&count_rate);
 	Tr->SetBranchAddress("hist",&hist);
 	Tr->GetEntry(0);
-	cout << rn << endl;
+	// cout << count_rate << endl;
 	hist->Draw();
 }
 
-// create_wf(TH1F *hist, int count_rate)
-// {
+void run()
+{
+	// do this part manually
+	TFile hfile("rate_scan.root","UPDATE","Rate scan for 14 KeV");
+	TTree *Tr = new TTree("Tr","Tree of waveforms for 14KeV");
 
-// }
+	int rate;
+	TH1F *hh;
 
+	Tr->Branch("rate", &rate, "rate/I");
+	Tr->Branch("hist", "TH1F", &hh, 10240000000, 0);
+	// Tr->Branch("hist", "TH1F", &hh, 10240000, 0);
+	// do this part manually [end]
+
+	// loop to do
+	// main_func(14,1244,67,3600,100,23.6151);
+	// main_func(14,1244,67,3700,100,23.6151);
+	// main_func(14,1244,67,3800,100,23.6151);
+
+	// writing the file manually
+	hfile.Write();
+	hfile.Close();
+
+}
 
 TH1F *main_func(int E_0 = 14, double gauss_rms = 1244,
-				int sig_dec_time = 85, int count_rate = 10,
+				int sig_dec_time = 67, int count_rate = 10,
 				int num_pulses = 10000, double d = 23.6151)
 {
+
 	cout << "\n////////////////////////////////////////////////////////////////////////////////\n\n";
 	cout << "Energy of the photons in keV:\t" << E_0 << endl;
 	cout << "RMS of gaussian noise:\t\t" << gauss_rms << endl;
@@ -512,7 +524,7 @@ TH1F *main_func(int E_0 = 14, double gauss_rms = 1244,
 	TH1F *main_histogram = waveform(E_0*1000, gauss_rms, sig_dec_time, count_rate, num_pulses, d);
 	// Q_trap2->SetMarkerStyle(20);
 	// Q_trap2->Draw("");
-	// return main_histogram;
+	return main_histogram;
 
 
 	// return 0;
@@ -750,5 +762,7 @@ TH1F *main_func(int E_0 = 14, double gauss_rms = 1244,
 	// return en_wnoise;
 	// return s_hist;
 	// return main_histogram;
+
+	gROOT->Reset();
 	return 0;
 }
