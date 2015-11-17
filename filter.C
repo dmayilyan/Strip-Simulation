@@ -25,6 +25,7 @@ void get_dec_time()
 		gr_dec->SetPoint(i,r,sim_0);
 		gr_dec->SetPointError(i,0,sim_0_err);
 
+		// experimental with points
 		gr_dec_exp->SetPoint(i,r,exp_0);
 		gr_dec_exp->SetPointError(i,0,exp_0_err);
 
@@ -33,15 +34,25 @@ void get_dec_time()
 		f.getline(line,2048);
 		i++;
 	}
+
+	TF1 *exp_lin = new TF1("exp_lin","pol0",2,10);
+	exp_lin->FixParameter(0,exp_0);
+
 	gr_dec->Draw("A*");
-	gr_dec_exp->Draw("SAME *");
+	// exp_lin->DrawCopy("SAME");
+	// exp_lin->Draw();
+	gr_dec_exp->Draw("SAME L3");
+
+
 
 	gr_dec->GetXaxis()->SetTitle("Decay time");
 	gr_dec->GetYaxis()->SetTitle("Exp fit argument");
 	gr_dec->GetXaxis()->SetTitleOffset(1.3);
 	gr_dec->GetYaxis()->SetTitleOffset(1.2);
-	gr_dec->SetMarkerColor(kRed+1);
-	gr_dec_exp->SetMarkerColor(kBlue+1);
+	gr_dec->SetMarkerColor(kBlue+1);
+
+	gr_dec_exp->SetMarkerColor(kGreen+1);
+	gr_dec_exp->SetFillColor(kRed);
 
 }
 
