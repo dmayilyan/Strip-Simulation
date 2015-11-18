@@ -1,8 +1,180 @@
 #define AV_POINTS 3		//  Should be odd
 
-void ef_scan(int E_0 = 14, double thr1 = 0.5, double thr2 = 1.5, double thr3 = 2.5)
+
+#include "filter.C"
+
+void ef_scan3(int E_0 = 14, double thr0 = 0.5, double thr1 = 1.5, double thr2 = 2.5)
 {
-	double thr[4] = {thr1,thr2,thr3,thr4};
+	double thr[3] = {thr0,thr1,thr2};
+	double y0[500] = {0,};
+
+	double x_sum[500] = {0,};
+	double y_sum[500] = {0,};
+
+	// making the root filename fot given energy
+	char filename[32];
+	snprintf(filename, sizeof(filename), "rate_scan_%d_cad.root", E_0);
+
+
+	// opening the rate_scan tree
+	TFile *f = new TFile(filename);
+	TTree *Tr = (TTree*)f->Get("Tr");
+	int rate, n_phot;
+	TH1F *s_hist;
+	Tr->SetBranchAddress("rate_c",&rate);
+	Tr->SetBranchAddress("n_phot_c",&n_phot);
+	Tr->SetBranchAddress("s_hist_c",&s_hist);
+
+	int ch_sh;
+	if (E_0 == 14)
+		ch_sh = 0;
+	else if (E_0 == 18)
+		ch_sh = 1;
+	else if (E_0 == 22)
+		ch_sh = 2;
+
+
+	double charge_sh[3] = {24.08,23.55,23.71};
+	// Collected charge correction
+	double coll_corr = 50./(50.+charge_sh[ch_sh]);
+
+	TMultiGraph *mg = new TMultiGraph();
+
+	// Making graph array
+	char graphname1[16];
+	char graphname2[16];
+	TGraphErrors *ef_graph[10];
+	TGraphErrors *ef_sum[10];
+	for (int i = 0; i < 3; i++)
+	{
+		sprintf(graphname1,"ef_graph_%d",i);
+		ef_graph[i] = new TGraphErrors();
+
+		sprintf(graphname2,"ef_sum_%d",i);
+		ef_sum[i] = new TGraphErrors();
+	}
+
+
+	char all_name[16];
+	sprintf(all_name,"th =");
+	char sum_name[32];
+	sprintf(sum_name,"th = 0.5, 0.5 +");
+	Int_t nentries = (Int_t)Tr->GetEntries();
+	for (int t = 0; t < 3; t++)
+	{
+		for (int i = 0; i < nentries; i++)
+		{
+			double x[500] = {0,};
+			double y[500] = {0,};
+			double x_err[500] = {0,};
+			double y_err[500] = {0,};
+
+			Tr->GetEntry(i);
+			
+			// getting number of counts at given threshold
+			int noc_bin = s_hist->FindBin((int)(E_0*1000))*thr[t];
+			double noc = s_hist->GetBinContent(noc_bin);
+
+			// cout << "Number of count for " << rate << " is " << noc << " for threshold of " << thr[t] << endl;
+
+
+			n_phot = n_phot*coll_corr;
+
+			x[i] = rate*coll_corr*1000;
+			x_sum[i] = x[i];
+			y[i] = noc/n_phot;
+			// x_err[i] = sqrt(rate)*coll_corr;
+			y_err[i] = sqrt(1/noc+1/n_phot);
+
+			// if (y[i] == 0) y_err[i] = 0.2;
+			// if (t == 3) cout << y[i] << endl;
+
+			ef_graph[t]->SetPoint(i,x[i],y[i]);
+			ef_graph[t]->SetPointError(i,0,y_err[i]);
+
+			if (t != 0)
+				ef_sum[t-1]->SetPoint(i,x[i],y0[i] + y[i]);
+			else
+			{
+				y0[i] = y[i];
+				y_sum[i] = y[i];
+			}
+
+			if (t == 1)
+				y_sum[i] += y[i];
+			else if (t == 2)
+			{
+				y_sum[i] += y[i];
+				ef_sum[t]->SetPoint(i,x_sum[i], y_sum[i]);
+			}
+		}
+		// Generating graph name
+		char loc_name[16];
+		sprintf(loc_name,"th = %1.1f",thr[t]);
+
+		if (t != 2)
+			sprintf(all_name + strlen(all_name)," %1.1f,",thr[t]);
+		else
+			sprintf(all_name + strlen(all_name)," %1.1f",thr[t]);
+
+		if (t == 1)
+			sprintf(sum_name + strlen(sum_name)," %1.1f,",thr[t]);
+		if (t == 2)
+			sprintf(sum_name + strlen(sum_name)," %1.1f",thr[t]);
+
+		mg->Add(ef_graph[t]);
+		ef_graph[t]->SetTitle(loc_name);
+	}
+
+	TGraphErrors *exp_eff = run();
+
+/*
+	ef_graph[0]->Draw("A*");
+	ef_graph[1]->Draw("SAME *");
+	ef_graph[2]->Draw("SAME *");
+
+	ef_graph[0]->GetXaxis()->SetTitle("Rate");
+	ef_graph[0]->GetYaxis()->SetTitle("Efficiency");
+
+	ef_graph[0]->SetMarkerColor(kRed+1);
+	ef_graph[1]->SetMarkerColor(kBlue+1);
+	ef_graph[2]->SetMarkerColor(kGreen+1);
+
+	c1->SetLogx();
+	c1->SetGridx();
+	c1->SetGridy();
+	ef_graph[0]->SetTitle(all_name);
+	ef_graph[0]->GetYaxis()->SetRangeUser(0,1.075);
+*/
+	// mg->Draw("a* fb l3d");
+
+	TCanvas *c2 = new TCanvas("Sum of Effs");
+	ef_sum[0]->Draw("A*");
+	ef_graph[0]->Draw("SAME *");
+	ef_sum[1]->Draw("SAME *");
+	ef_sum[2]->Draw("SAME *");
+	exp_eff->Draw("SAME *");
+
+	ef_sum[0]->GetXaxis()->SetTitle("Rate");
+
+
+	ef_sum[0]->SetMarkerColor(kBlue+1);
+	ef_graph[0]->SetMarkerColor(kRed+1);
+	ef_sum[1]->SetMarkerColor(kGreen+1);
+	ef_sum[2]->SetMarkerColor(kBlack);
+	exp_eff->SetMarkerColor(kOrange+7);
+
+ 	c2->SetLogx();
+	c2->SetGridx();
+	c2->SetGridy();
+	ef_sum[0]->SetTitle(sum_name);
+	ef_sum[0]->GetYaxis()->SetRangeUser(0,1.1);
+	// ef_sum[0]->GetYaxis()->SetRangeUser(0.8,1.1);
+}
+
+void ef_scan4(int E_0 = 14, double thr0 = 0.5, double thr1 = 1.5, double thr2 = 2.5, double thr3 = 3.5)
+{
+	double thr[4] = {thr0,thr1,thr2,thr3};
 	double y0[500] = {0,};
 
 	double x_sum[500] = {0,};
@@ -181,14 +353,17 @@ void ef_scan(int E_0 = 14, double thr1 = 0.5, double thr2 = 1.5, double thr3 = 2
 	// c2->Modified();
 }
 
-void get_dev3(int E_0 = 14, int r = 2700)
+void get_dev3(int E_0 = 14)
 {
-	h2 = new TH2F("h2","thresholds", 31, 0.5, 3.5, 31, 0.5, 3.5);
+	gr = new TGraphErrors();
+	double x[500] = {0.,};
+	double y[500] = {0.,};
 
+	h2 = new TH2F("h2","thresholds", 32, 0.5, 3.6, 32, 0.5, 3.6);
 
 	// making the root filename fot given energy
 	char filename[32];
-	snprintf(filename, sizeof(filename), "rate_scan_%d_cal.root", E_0);
+	snprintf(filename, sizeof(filename), "rate_scan_%d_cad.root", E_0);
 
 
 	// opening the rate_scan tree
@@ -215,96 +390,52 @@ void get_dev3(int E_0 = 14, int r = 2700)
 
 	// TMultiGraph *mg = new TMultiGraph();
 
-	// Making graph array
-	char graphname1[16];
-	char graphname2[16];
-	TGraphErrors *ef_graph[10];
-	TGraphErrors *ef_sum[10];
-	for (int i = 0; i < 4; i++)
-	{
-		sprintf(graphname1,"ef_graph_%d",i);
-		ef_graph[i] = new TGraphErrors();
 
-		sprintf(graphname2,"ef_sum_%d",i);
-		ef_sum[i] = new TGraphErrors();
-	}
-
-
-	char all_name[16];
-	sprintf(all_name,"th =");
-	char sum_name[32];
-	sprintf(sum_name,"th = 0.5, 0.5 +");
-
-
-	int entry_num;
+	int st = 10;
 	Int_t nentries = (Int_t)Tr->GetEntries();
-	// Finding entry number
-	for (int i = 0; i < nentries; i++)
+	for (int entry_num = 0; entry_num <= nentries; entry_num++)
 	{
-		Tr->GetEntry(i);
-		if (rate == r)
-		{
-			entry_num = i;
-			cout << "Entry number is " << entry_num << endl;
-		}
+		// finding efficiency for thr0(0.5) to not repeat it on every threshold pair call
+		Tr->GetEntry(entry_num);
 
-	}
+		// getting number of counts at given threshold
+		double thr0 = 0.5;
+		int noc_bin = s_hist->FindBin((int)(E_0*1000))*thr0;
+		double noc = s_hist->GetBinContent(noc_bin);
 
-	double thr0 = 0.5;
-	int scan_thr = 0;
-	for (double thr1 = 0.5; thr1 <= 3.5; thr1+=0.1)
-		for (double thr2 = thr1; thr2 <= 3.5; thr2+=0.1)
-		{
-			// cout << thr1*10-4 << endl;
-			// generating array with given thresholds
-			// double thr[3] = {0.,};
-			double thr[3] = {thr0,thr1,thr2};
+		n_phot = n_phot*coll_corr;
 
-			double x_sum[500] = {0,};
-			double y_sum[500] = {0,};
+		double y0 = (1 - noc/n_phot) * (1 - noc/n_phot);
 
+		// cout << "y0\t" << y0 << endl;
 
-			for (int t = 0; t < 3; t++)
+		x[entry_num] = rate*coll_corr;
+
+		int scan_thr = 0;
+		for (double thr1 = 1.0; thr1 < 3.6; thr1+=0.1)
+			for (double thr2 = 1.0; thr2 < 3.6; thr2+=0.1)
 			{
-				double x[500] = {0,};
-				double y[500] = {0,};
-				double x_err[500] = {0,};
-				double y_err[500] = {0,};
+				// generating array with given thresholds
+				double thr[2] = {thr1,thr2};
 
-
-					Tr->GetEntry(entry_num);
-
+				for (int t = 0; t < 2; t++)
+				{
 					// getting number of counts at given threshold
 					int noc_bin = s_hist->FindBin((int)(E_0*1000))*thr[t];
 					double noc = s_hist->GetBinContent(noc_bin);
 
-					// cout << "Number of count for " << rate << " is " << noc << " for threshold of " << thr[t]/20. << endl;
+					y[entry_num] += (1 - noc/n_phot) * (1 - noc/n_phot) + y0;
+				}
 
-
-					n_phot = n_phot*coll_corr;
-
-					x[entry_num] = rate*coll_corr*1000;
-					// if (i != 0) cout << x[i] - x[i-1] << endl;
-					x_sum[entry_num] = x[entry_num];
-					y[entry_num] = noc/n_phot;
-					x_err[entry_num] = sqrt(rate)*coll_corr;
-					y_err[entry_num] = sqrt(1/noc+1/n_phot);
-
-					if ((t == 0) && (x[entry_num] < r*1000))
-						scan_thr = entry_num;
-
-					// ef_graph[t]->SetPoint(i,x[i],y[i]);
-					// ef_graph[t]->SetPointError(i,x_err[i],y_err[i]);
-
-					y_sum[entry_num] += y[entry_num];
-
+				// int asd = h2->FindBin(qwe1,qwe2);
+				// h2->SetBinContent(h2->GetXaxis()->FindBin(thr1),h2->GetYaxis()->FindBin(thr2), y_sum[scan_thr]);
+				// cout << thr1 << " " << h2->GetXaxis()->FindBin(thr1) << "\t" << thr2 << " " << h2->GetYaxis()->FindBin(thr2) << "\t" << y_sum[scan_thr] << endl;
 			}
+		gr->SetPoint(entry_num, x[entry_num], y[entry_num]/nentries);
 
-			// int asd = h2->FindBin(qwe1,qwe2);
-			h2->SetBinContent(h2->GetXaxis()->FindBin(thr1),h2->GetYaxis()->FindBin(thr2), y_sum[scan_thr]);
-			cout << thr1 << " " << h2->GetXaxis()->FindBin(thr1) << "\t" << thr2 << " " << h2->GetYaxis()->FindBin(thr2) << "\t" << y_sum[scan_thr] << endl;
-		}
-	
+		cout << rate << "\t" << x[entry_num] << "\t" << y[entry_num]/nentries << "\t" << endl;
+	}
+	gr->Draw("A*");	
 
 	// ef_sum[0]->Draw("A*");
 	// ef_graph[0]->Draw("SAME *");
@@ -325,17 +456,17 @@ void get_dev3(int E_0 = 14, int r = 2700)
 	// ef_sum[0]->SetTitle(sum_name);
 	// ef_sum[0]->GetYaxis()->SetRangeUser(0,1.1);
 
-	TCanvas *c2 = new TCanvas("Scan");
-	h2->Draw("CONT1");
-	h2->GetXaxis()->SetRangeUser(5,35);
-	h2->GetYaxis()->SetRangeUser(5,35);
+	// TCanvas *c2 = new TCanvas("Scan");
+	// h2->Draw("LEGO2");
+	// h2->GetXaxis()->SetRangeUser(5,35);
+	// h2->GetYaxis()->SetRangeUser(5,35);
 
-	h2->GetXaxis()->SetTitle("thr1");
-	h2->GetYaxis()->SetTitle("thr2");
-	h2->GetZaxis()->SetTitle("Efficiency");
-	h2->GetXaxis()->SetTitleOffset(1.5);
-	h2->GetYaxis()->SetTitleOffset(1.5);
-	h2->GetZaxis()->SetTitleOffset(1.5);
+	// h2->GetXaxis()->SetTitle("thr1");
+	// h2->GetYaxis()->SetTitle("thr2");
+	// h2->GetZaxis()->SetTitle("Efficiency");
+	// h2->GetXaxis()->SetTitleOffset(1.5);
+	// h2->GetYaxis()->SetTitleOffset(1.5);
+	// h2->GetZaxis()->SetTitleOffset(1.5);
 }
 
 
@@ -403,6 +534,10 @@ void get_dev4(int E_0 = 14, int r = 2700)
 			for (double thr3 = 0.5; thr3 <= 3.5; thr3+=0.1)
 			{
 				// cout << thr2*10-4 << endl;
+		
+		// getting number of counts at given threshold
+		int noc_bin = s_hist->FindBin((int)(E_0*1000))*thr[t];
+		double noc = s_hist->GetBinContent(noc_bin);
 				// generating array with given thresholds
 				double thr[4] = {0.,};
 				double thr[4] = {thr0,thr1,thr2,thr3};
@@ -660,7 +795,7 @@ void s_scan(int E_0 = 14, int r1 = 0, int r2 = 20, int r3 = 50)
 	// mg->Draw("a* fb l3d");
 }
 
-void comp(int r)
+void comp(int r = 10)
 {
 	gr1 = new TGraph();
 	gr2 = new TGraph();
@@ -679,8 +814,8 @@ void comp(int r)
 	Tr->SetBranchAddress("n_phot",&n_phot);
 	Tr->SetBranchAddress("s_hist",&s_hist);
 
-	// reading calence data
-	TFile *f_c = new TFile("rate_scan_14_cal.root");
+	// reading cadence data
+	TFile *f_c = new TFile("rate_scan_14_cad.root");
 	TTree *Tr_c = (TTree*)f_c->Get("Tr");
 	int rate_c, n_phot_c;
 	TH1F *s_hist_c;
@@ -689,7 +824,7 @@ void comp(int r)
 	Tr_c->SetBranchAddress("s_hist_c",&s_hist_c);
 
 	// reading experimental data
-	TFile *g = new TFile("22_exp.root");
+	TFile *g = new TFile("14_exp.root");
 	TTree *Tr_exp = (TTree*)g->Get("Tr_exp");
 	// Tr_exp->Scan();
 	TH1F *s_hist_exp;
@@ -716,16 +851,16 @@ void comp(int r)
 		
 	}
 
-	// TCanvas *c2 = new TCanvas("Ratio of calence and exponent");
+	// TCanvas *c2 = new TCanvas("Ratio of cadence and exponent");
 
 	gr1->Draw("A*");
 	gr2->Draw("SAME *");
 	gr3->Draw("SAME *");
 	
 
-	gr1->SetTitle("Ratio of calence and exponent");
+	gr1->SetTitle("Ratio of cadence and exponent");
 	gr1->GetXaxis()->SetTitle("Rate [kHz]");
-	gr1->GetYaxis()->SetTitle("calence/exponent");
+	gr1->GetYaxis()->SetTitle("cadence/exponent");
 	gr1->GetXaxis()->SetTitleOffset(1.2);
 	gr1->SetMarkerColor(kBlue+1);
 	gr2->SetMarkerColor(kGreen+1);
@@ -734,10 +869,10 @@ void comp(int r)
 	c1->SetGridy();
 
 
-	// plotting calence and exponent pulses' s-curves
-	TCanvas *c2 = new TCanvas("Ratio of calence and exponent");
+	// plotting cadence and exponent pulses' s-curves
+	TCanvas *c2 = new TCanvas("Ratio of cadence and exponent at given thresholds");
 
-	//Calence and exponent pulses s-curves
+	//Cadence and exponent pulses' s-curves
 	int entry_num;
 	Int_t nentries = (Int_t)Tr->GetEntries();
 	// Finding entry number
@@ -755,7 +890,7 @@ void comp(int r)
 	s_hist_c->Draw();
 	s_hist->Draw("SAME");
 
-	s_hist_c->SetTitle("Calence and exponent pulses' s-curves");
+	s_hist_c->SetTitle("Cadence and exponent pulses' s-curves");
 	s_hist_c->GetXaxis()->SetTitle("threshold");
 	s_hist_c->GetYaxis()->SetTitle("counts");
 	s_hist_c->GetYaxis()->SetTitleOffset(1.4);
