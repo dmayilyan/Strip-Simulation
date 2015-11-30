@@ -3,8 +3,214 @@
 
 #include "filter.C"
 
-void ef_scan3(int E_0 = 14, double thr0 = 0.5, double thr1 = 1.5, double thr2 = 2.5)
+void ef_scan3_scan(double thr0 = 0.5, double thr1 = 1.5, double thr_low = 2.5, double thr_high = 3.5, double step = 0.1)
 {
+	int E_0 = 14;
+	// double x[500] = {0,};
+	// double y[500] = {0,};
+	double x,y;
+
+	double thr[500] = {0,};
+	// thr[0] = thr0;
+	// thr[1] = thr1;
+
+	double x_sum[500] = {0,};
+	double y_sum[500] = {0,};
+
+	// making the root filename fot given energy
+	char filename[32];
+	snprintf(filename, sizeof(filename), "rate_scan_%d_cad.root", E_0);
+
+
+	// opening the rate_scan tree
+	TFile *f = new TFile(filename);
+	TTree *Tr = (TTree*)f->Get("Tr");
+	int rate, n_phot;
+	TH1F *s_hist;
+	Tr->SetBranchAddress("rate_c",&rate);
+	Tr->SetBranchAddress("n_phot_c",&n_phot);
+	Tr->SetBranchAddress("s_hist_c",&s_hist);
+
+	int ch_sh;
+	if (E_0 == 14)
+		ch_sh = 0;
+	else if (E_0 == 18)
+		ch_sh = 1;
+	else if (E_0 == 22)
+		ch_sh = 2;
+
+
+	double charge_sh[3] = {24.08,23.55,23.71};
+	// Collected charge correction
+	double coll_corr = 50./(50.+charge_sh[ch_sh]);
+
+	TMultiGraph *mg = new TMultiGraph();
+
+
+	int num_thrs = 0;
+	//filling the threshold array
+	for (double th_i = thr_low; th_i < thr_high+0.01; th_i += step)
+	{
+		thr[num_thrs] = th_i;
+		cout << num_thrs << "\t!!! " << th_i << " !!!\t" << thr[num_thrs] << "\tqweqwe\t" << thr_high << endl;
+		// cout << thr[0] << "\t" << thr[1] << "\t" << thr[2] << "\t" << thr[3] << "\t" << thr[4] << "\t" << thr[5] << "\t" << thr[6] << "\n"; 
+		++num_thrs;
+	}
+
+	// cout << num_thrs << "\tthr_count !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
+
+	// Making graph array
+	char graphname1[16];
+	char graphname2[16];
+	TGraphErrors *ef_graph[50];
+	TGraphErrors *ef_sum[50];
+
+	for (int i = 0; i <= num_thrs; i++)
+	{
+		sprintf(graphname1,"ef_graph_%d",i);
+		ef_graph[i] = new TGraphErrors();
+
+		sprintf(graphname2,"ef_sum_%d",i);
+		ef_sum[i] = new TGraphErrors();
+	}
+
+	char all_name[16];
+	sprintf(all_name,"th =");
+	char sum_name[128];
+	snprintf(sum_name, sizeof(sum_name), "th = %1.2f, %1.2f, %1.2f-%1.2f, in %1.2f step", thr0, thr1, thr_low, thr_high, step);
+	Int_t nentries = (Int_t)Tr->GetEntries();
+	for (int entry_num = 0; entry_num < nentries; entry_num++)
+	{
+		// cout << thr[entry_num] << " 213123123123" << endl;
+		///////////////////////////////////////
+		// First threshold
+
+		// finding efficiency for thr0(0.5) to not repeat it on every threshold pair call
+		Tr->GetEntry(entry_num);
+
+		// getting number of counts at given threshold
+		// double thr0 = 0.5;
+		int noc_bin = s_hist->FindBin((int)(E_0*1000))*thr0;
+		double noc = s_hist->GetBinContent(noc_bin);
+
+		n_phot = n_phot*coll_corr;
+
+		double y0 = noc/n_phot;
+
+		x = rate*coll_corr;
+
+		///////////////////////////////////////
+		// Second threshold
+
+		// finding efficiency for thr0(0.5) to not repeat it on every threshold pair call
+		Tr->GetEntry(entry_num);
+
+		// getting number of counts at given threshold
+		// double thr1 = 1.5;
+		int noc_bin = s_hist->FindBin((int)(E_0*1000))*thr1;
+		double noc = s_hist->GetBinContent(noc_bin);
+
+		n_phot = n_phot*coll_corr;
+
+		double y1 = noc/n_phot;
+
+
+		Tr->GetEntry(entry_num);
+		// cout << "rate " << rate << endl;
+
+		n_phot = n_phot*coll_corr;
+
+		for (int t = 0; t < num_thrs; t++)
+		{
+			// cout << "Scanning threshold " << thr0 << ", " << thr1 << ", and " << thr[t] << " from range [" << thr_low << "," << thr_high << "] in step of " << step << ".\n";
+			// cout << "I AM HERE\n\n\n";
+
+			
+			// getting number of counts at given threshold
+			int noc_bin = s_hist->FindBin((int)(E_0*1000))*thr[t];
+			double noc = s_hist->GetBinContent(noc_bin);
+
+			// cout << "Number of count for " << rate << " is " << noc << " for threshold of " << thr[t] << endl;
+
+			x = rate*coll_corr*1000;
+			y = noc/n_phot;
+
+			// if (entry_num == nentries-1)
+			cout << t+1 << "\t" << thr[t] << "\t" << rate << "\ty0:\t" << y0 << " y1:\t" << y1 << " y+y0+y1:\t" << y+y0+y1 << endl;
+			ef_graph[t]->SetPoint(entry_num,x,y+y0+y1);
+
+			mg->Add(ef_graph[t]);
+		}
+
+	}
+
+	for (int i = 0; i <= num_thrs; i++)
+	{
+		if (i == 0)
+		{
+			ef_graph[i]->Draw("A*");
+			ef_graph[i]->GetXaxis()->SetTitle("Rate [Hz]");
+			ef_graph[i]->GetYaxis()->SetTitle("Efficiency");
+			ef_graph[i]->GetXaxis()->SetTitleOffset(1.2);
+			ef_graph[i]->GetYaxis()->SetTitleOffset(1.1);
+			ef_graph[i]->SetTitle(sum_name);
+
+
+		}
+
+		ef_graph[i]->Draw("SAME *");
+		if (i < 3)
+			ef_graph[i]->SetMarkerColor(kBlue-i);
+		else if (i < 6)
+			ef_graph[i]->SetMarkerColor(kGreen-i%3);
+		else if (i < 9)
+			ef_graph[i]->SetMarkerColor(kRed-i%3);
+		else if (i < 12)
+			ef_graph[i]->SetMarkerColor(kCyan-i%3);
+
+	}
+
+	c1->SetLogx();
+	c1->SetGridx();
+	c1->SetGridy();
+
+	// ef_graph[0]->GetYaxis()->SetRangeUser(0,1.075);
+
+/*	TGraphErrors *exp_eff = run();
+
+	// mg->Draw("a* fb l3d");
+
+	TCanvas *c2 = new TCanvas("Sum of Effs");
+	ef_sum[0]->Draw("A*");
+	ef_graph[0]->Draw("SAME *");
+	ef_sum[1]->Draw("SAME *");
+	ef_sum[2]->Draw("SAME *");
+	exp_eff->Draw("SAME *");
+
+	ef_sum[0]->GetXaxis()->SetTitle("Rate");
+
+
+	ef_sum[0]->SetMarkerColor(kBlue+1);
+	ef_graph[0]->SetMarkerColor(kRed+1);
+	ef_sum[1]->SetMarkerColor(kGreen+1);
+	ef_sum[2]->SetMarkerColor(kBlack);
+	exp_eff->SetMarkerColor(kOrange+7);
+
+ 	c2->SetLogx();
+	c2->SetGridx();
+	c2->SetGridy();
+	ef_sum[0]->SetTitle(sum_name);
+	ef_sum[0]->GetYaxis()->SetRangeUser(0,1.1);
+	// ef_sum[0]->GetYaxis()->SetRangeUser(0.8,1.1);
+
+	mg->Draw();*/
+	// mg->Draw();
+}
+
+
+void ef_scan3(double thr0 = 0.5, double thr1 = 1.5, double thr2 = 2.5)
+{
+	int E_0 = 14;
 	double thr[3] = {thr0,thr1,thr2};
 	double y0[500] = {0,};
 
@@ -110,17 +316,17 @@ void ef_scan3(int E_0 = 14, double thr0 = 0.5, double thr1 = 1.5, double thr2 = 
 		}
 		// Generating graph name
 		char loc_name[16];
-		sprintf(loc_name,"th = %1.1f",thr[t]);
+		sprintf(loc_name,"th = %1.2f",thr[t]);
 
 		if (t != 2)
-			sprintf(all_name + strlen(all_name)," %1.1f,",thr[t]);
+			sprintf(all_name + strlen(all_name)," %1.2f,",thr[t]);
 		else
-			sprintf(all_name + strlen(all_name)," %1.1f",thr[t]);
+			sprintf(all_name + strlen(all_name)," %1.2f",thr[t]);
 
 		if (t == 1)
-			sprintf(sum_name + strlen(sum_name)," %1.1f,",thr[t]);
+			sprintf(sum_name + strlen(sum_name)," %1.2f,",thr[t]);
 		if (t == 2)
-			sprintf(sum_name + strlen(sum_name)," %1.1f",thr[t]);
+			sprintf(sum_name + strlen(sum_name)," %1.2f",thr[t]);
 
 		mg->Add(ef_graph[t]);
 		ef_graph[t]->SetTitle(loc_name);
@@ -164,7 +370,7 @@ void ef_scan3(int E_0 = 14, double thr0 = 0.5, double thr1 = 1.5, double thr2 = 
 	ef_sum[2]->SetMarkerColor(kBlack);
 	exp_eff->SetMarkerColor(kOrange+7);
 
- 	c2->SetLogx();
+	c2->SetLogx();
 	c2->SetGridx();
 	c2->SetGridy();
 	ef_sum[0]->SetTitle(sum_name);
@@ -172,8 +378,9 @@ void ef_scan3(int E_0 = 14, double thr0 = 0.5, double thr1 = 1.5, double thr2 = 
 	// ef_sum[0]->GetYaxis()->SetRangeUser(0.8,1.1);
 }
 
-void ef_scan4(int E_0 = 14, double thr0 = 0.5, double thr1 = 1.5, double thr2 = 2.5, double thr3 = 3.5)
+void ef_scan4(double thr0 = 0.5, double thr1 = 1.5, double thr2 = 2.5, double thr3 = 3.5)
 {
+	int E_0 = 14;
 	double thr[4] = {thr0,thr1,thr2,thr3};
 	double y0[500] = {0,};
 
@@ -348,16 +555,20 @@ void ef_scan4(int E_0 = 14, double thr0 = 0.5, double thr1 = 1.5, double thr2 = 
 	c2->SetGridy();
 	ef_sum[0]->SetTitle(sum_name);
 	ef_sum[0]->GetYaxis()->SetRangeUser(0,1.1);
-	ef_sum[0]->GetYaxis()->SetRangeUser(0,3.1);
+	// ef_sum[0]->GetYaxis()->SetRangeUser(0,3.1);
 
 	// c2->Modified();
 }
 
-void get_dev3(int E_0 = 14)
+///
+
+void get_dev3()
 {
+	int E_0 = 14;
 	gr = new TGraphErrors();
 	double x[500] = {0.,};
 	double y[500] = {0.,};
+	double xy[50][50] ={0.,}{0.,};
 
 	h2 = new TH2F("h2","thresholds", 32, 0.5, 3.6, 32, 0.5, 3.6);
 
@@ -390,10 +601,15 @@ void get_dev3(int E_0 = 14)
 
 	// TMultiGraph *mg = new TMultiGraph();
 
+	double thr1_low_edge = 0.5;
+	double thr1_high_edge = 3.6;
+	double thr2_low_edge = 0.5;
+	double thr2_high_edge = 3.6;
 
-	int st = 10;
+
+	double thr0 = 0.5;
 	Int_t nentries = (Int_t)Tr->GetEntries();
-	for (int entry_num = 0; entry_num <= nentries; entry_num++)
+	for (int entry_num = 0; entry_num <= 107/*nentries*/; entry_num++)
 	{
 		// finding efficiency for thr0(0.5) to not repeat it on every threshold pair call
 		Tr->GetEntry(entry_num);
@@ -405,18 +621,20 @@ void get_dev3(int E_0 = 14)
 
 		n_phot = n_phot*coll_corr;
 
-		double y0 = (1 - noc/n_phot) * (1 - noc/n_phot);
-
-		// cout << "y0\t" << y0 << endl;
+		double y0 = noc/n_phot;
 
 		x[entry_num] = rate*coll_corr;
 
-		int scan_thr = 0;
-		for (double thr1 = 1.0; thr1 < 3.6; thr1+=0.1)
-			for (double thr2 = 1.0; thr2 < 3.6; thr2+=0.1)
+		for (double thr1 = thr1_low_edge; thr1 < thr1_high_edge; thr1+=0.1)
+			for (double thr2 = thr2_low_edge; thr2 < thr2_high_edge; thr2+=0.1)
 			{
+				// buffer for deviation calculation
+				double thr_buffer = 0;
 				// generating array with given thresholds
 				double thr[2] = {thr1,thr2};
+
+				int i1 = thr1*10-4;
+				int i2 = thr2*10-4;
 
 				for (int t = 0; t < 2; t++)
 				{
@@ -424,18 +642,29 @@ void get_dev3(int E_0 = 14)
 					int noc_bin = s_hist->FindBin((int)(E_0*1000))*thr[t];
 					double noc = s_hist->GetBinContent(noc_bin);
 
-					y[entry_num] += (1 - noc/n_phot) * (1 - noc/n_phot) + y0;
+					thr_buffer += noc/n_phot;
 				}
+				// adding threshold counts at 0.5 energy
+				thr_buffer += y0;
 
-				// int asd = h2->FindBin(qwe1,qwe2);
-				// h2->SetBinContent(h2->GetXaxis()->FindBin(thr1),h2->GetYaxis()->FindBin(thr2), y_sum[scan_thr]);
-				// cout << thr1 << " " << h2->GetXaxis()->FindBin(thr1) << "\t" << thr2 << " " << h2->GetYaxis()->FindBin(thr2) << "\t" << y_sum[scan_thr] << endl;
+				// cout << i1 << "\t" << i2 << "\t" << xy[i1][i2] << endl;
+				// cout << i1 << "\t" << i2 << "\t" << thr_buffer << "\t" << (1 - thr_buffer)*(1 - thr_buffer) << "\n\n";
+				// // Calculating and summing deviation
+				xy[i1][i2] += (1-thr_buffer)*(1-thr_buffer);
+				// if ((thr_buffer > 1)&&(thr_buffer < 0.9))
+				// 	xy[i1][i2] = 101;
 			}
-		gr->SetPoint(entry_num, x[entry_num], y[entry_num]/nentries);
 
-		cout << rate << "\t" << x[entry_num] << "\t" << y[entry_num]/nentries << "\t" << endl;
 	}
-	gr->Draw("A*");	
+
+	// filling the 2D histogram
+	for (double thr1 = thr1_low_edge; thr1 < thr1_high_edge; thr1+=0.1)
+		for (double thr2 = thr2_low_edge; thr2 < thr2_high_edge; thr2+=0.1)
+		{
+			int i1 = thr1*10-4;
+			int i2 = thr2*10-4;
+			h2->SetBinContent(h2->GetXaxis()->FindBin(thr1),h2->GetYaxis()->FindBin(thr2), xy[i1][i2]);
+		}
 
 	// ef_sum[0]->Draw("A*");
 	// ef_graph[0]->Draw("SAME *");
@@ -457,21 +686,23 @@ void get_dev3(int E_0 = 14)
 	// ef_sum[0]->GetYaxis()->SetRangeUser(0,1.1);
 
 	// TCanvas *c2 = new TCanvas("Scan");
-	// h2->Draw("LEGO2");
-	// h2->GetXaxis()->SetRangeUser(5,35);
-	// h2->GetYaxis()->SetRangeUser(5,35);
+	h2->Draw("CONT1");
+	h2->GetXaxis()->SetRangeUser(5,3.5);
+	h2->GetYaxis()->SetRangeUser(5,3.5);
 
-	// h2->GetXaxis()->SetTitle("thr1");
-	// h2->GetYaxis()->SetTitle("thr2");
-	// h2->GetZaxis()->SetTitle("Efficiency");
-	// h2->GetXaxis()->SetTitleOffset(1.5);
-	// h2->GetYaxis()->SetTitleOffset(1.5);
-	// h2->GetZaxis()->SetTitleOffset(1.5);
+	h2->GetXaxis()->SetTitle("thr1");
+	h2->GetYaxis()->SetTitle("thr2");
+	h2->GetZaxis()->SetTitle("Efficiency");
+	h2->GetXaxis()->SetTitleOffset(1.5);
+	h2->GetYaxis()->SetTitleOffset(1.5);
+	h2->GetZaxis()->SetTitleOffset(1.5);
 }
 
+///
 
-void get_dev4(int E_0 = 14, int r = 2700)
+void get_dev4(int r = 2700)
 {
+	int E_0 = 14;
 	h2 = new TH2F("h2","thresholds", 31, 0.5, 3.5, 31, 0.5, 3.5);
 	// h2 = new TH2F("h2","thresholds");
 
@@ -666,8 +897,9 @@ void get_dev4(int E_0 = 14, int r = 2700)
 	h2->GetZaxis()->SetTitleOffset(1.5);
 }
 
-void s_scan(int E_0 = 14, int r1 = 0, int r2 = 20, int r3 = 50)
+void s_scan(int r1 = 0, int r2 = 20, int r3 = 50)
 {
+	int E_0 = 14;
 	double r[3] = {r1,r2,r3};
 	double slope[200000] = {0,};
 	slope[0] = 1;					//to avoid having a peak on 0 point
