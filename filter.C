@@ -56,7 +56,7 @@ void get_dec_time()
 
 }
 
-int run(int dec_time_ns = 85)
+TGraphErrors *run(int dec_time_ns = 67, bool outside_call = false)
 {
 	char filename[16];
 	snprintf(filename, sizeof(filename), "rate_%d.dat", dec_time_ns);
@@ -138,19 +138,28 @@ int run(int dec_time_ns = 85)
 
 			if ((i-1)%41==40)
 			{
-				gr->Draw("A*");
-				c1->SetGridx();
-				c1->SetGridy();
+				// checking if the call is from outside
+				if (outside_call == false)
+				{
+					gr->Draw("A*");
+					c1->SetGridx();
+					c1->SetGridy();					
+				}
 
 				// cout << x[last_item] << " x[last_item]" << endl;
 
 				TF1 *f1 = new TF1("f1","pol1",x[fit_lev],x[last_item-1]);
 				f1->FixParameter(0,0);
 				// f1->SetParLimits(0,-0.1,0.1);
-				gr->Fit("f1", "RCQ");
+				gr->Fit("f1", "RCQN");
 	
 				f1->SetRange(x[40],x[0]);
-				f1->Draw("SAME R");
+				// checking if the call is from outside
+				if (outside_call == false)
+				{
+					f1->SetLineColor(kRed);
+					f1->Draw("SAME R");
+				}
 					
 				for (int j = 0; j < last_item; j++)
 				{
@@ -189,11 +198,22 @@ int run(int dec_time_ns = 85)
 	cout << max_ratio << " max_ratio\n";
 
 	// plotting rate ratio
-	TCanvas *c3 = new TCanvas("Ratio");
-	gr3->Draw("A*");
-	// TF1 *exp_fit = new TF1("exp_fit","[0]-exp([1]*x)",x_ratio[0],x_ratio[40]);
+	// checking if the call is from outside
+	if (outside_call == false)
+	{
+		TCanvas *c3 = new TCanvas("Ratio");
+		gr3->Draw("A*");
+	}
+
 	TF1 *exp_fit = new TF1("exp_fit","exp(-[0]*x)",x_ratio[0],x_ratio[40]);
-	gr3->Fit("exp_fit", "R");
+	if (outside_call == false)
+	{
+		exp_fit->SetLineColor(kRed);
+		gr3->Fit("exp_fit", "R");
+	}
+	else
+		gr3->Fit("exp_fit", "RN");
+
 	double exp_par0 = exp_fit->GetParameter(0);
 	double exp_par0_err = exp_fit->GetParError(0);
 
@@ -221,7 +241,10 @@ int run(int dec_time_ns = 85)
 	double x_sim_ratio_err[500] = {0,};
 	double y_sim_ratio_err[500] = {0,};
 	
-	TCanvas *c3 = new TCanvas("Simulation data");
+	// checking if the call is from outside
+	if (outside_call == false)
+		TCanvas *c3 = new TCanvas("Simulation data");
+
 	gr4 = new TGraphErrors();
 	gr5 = new TGraphErrors();
 
@@ -301,11 +324,20 @@ int run(int dec_time_ns = 85)
 	}
 
 	// TCanvas *c3 = new TCanvas("Ratio sim");
-	gr4->Draw("A*");
-	// TF1 *sim_fit = new TF1("sim_fit","[0]-exp([1]*x)",x2[0],x2[fit_lev]);
+	// checking if the call is from outside
+	if (outside_call == false)
+		gr4->Draw("A*");
+
 	TF1 *sim_fit = new TF1("sim_fit","exp(-[0]*x)",x2[0],x2[fit_lev]);
 	sim_fit->SetParameter(0,1.55e-7);
-	gr4->Fit("sim_fit", "R");
+	if (outside_call == false)
+	{
+		sim_fit->SetLineColor(kRed);
+		gr4->Fit("sim_fit", "R");
+	}
+	else
+		gr4->Fit("sim_fit", "RN");
+
 	double sim_par0 = sim_fit->GetParameter(0);
 	double sim_par0_err = sim_fit->GetParError(0);
 	gr4->GetXaxis()->SetRangeUser(0,x2[fit_lev]);
@@ -317,6 +349,6 @@ int run(int dec_time_ns = 85)
 	printf("\n////////////////////////////////////////////////////////////////////////////////\n\n");
 
 
-	return 0;
+	return gr3;
 
 }
